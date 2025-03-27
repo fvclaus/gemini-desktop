@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://gitlab.com/google-cloud-ce/googlers/kkrish/mcp-gemini-electron-app/-/raw/main/mcp-gemini-desktop/assets/app_icon.png" width="128" height="128" alt="GemCP Chat Logo">
+  <img src="https://github.com/kkrishnan90/gemini-desktop/blob/main/mcp-gemini-desktop/assets/app_icon.png" width="128" height="128" alt="GemCP Chat Logo">
 
   <h1>GemCP Chat</h1>
 
@@ -11,17 +11,17 @@
 ## Screenshots
 
 <p align="center">
-  <img src="https://gitlab.com/google-cloud-ce/googlers/kkrish/mcp-gemini-electron-app/-/raw/main/mcp-gemini-desktop/demo_images/KdLPsRCxjbJB9ph.png" width="80%" alt="Chat Interface">
-  <br><em>Main chat interface with Gemini</em>
-</p>
-
-<p align="center">
-  <img src="https://gitlab.com/google-cloud-ce/googlers/kkrish/mcp-gemini-electron-app/-/raw/main/mcp-gemini-desktop/demo_images/C9zdjSLfhAfEswt.png" width="80%" alt="Weather Tool Example">
+  <img src="https://github.com/kkrishnan90/gemini-desktop/blob/main/mcp-gemini-desktop/demo_images/C9zdjSLfhAfEswt.png" width="80%" alt="Weather Tool Example">
   <br><em>Example of the weather tool in action</em>
 </p>
 
 <p align="center">
-  <img src="https://gitlab.com/google-cloud-ce/googlers/kkrish/mcp-gemini-electron-app/-/raw/main/mcp-gemini-desktop/demo_images/BEvT6bS7bFJVVKK.png" width="80%" alt="Calculator Tool Example">
+  <img src="https://github.com/kkrishnan90/gemini-desktop/blob/main/mcp-gemini-desktop/demo_images/BEvT6bS7bFJVVKK.png" width="80%" alt="Chat Interface">
+  <br><em>Main chat interface with Gemini</em>
+</p>
+
+<p align="center">
+  <img src="https://github.com/kkrishnan90/gemini-desktop/blob/main/mcp-gemini-desktop/demo_images/KdLPsRCxjbJB9ph.png" width="80%" alt="Calculator Tool Example">
   <br><em>Using the calculator tool with Gemini</em>
 </p>
 
