@@ -1,0 +1,64 @@
+{
+  "name": "mcp-gemini-desktop",
+  "version": "0.1.0",
+  "description": "Desktop chat app for Gemini with MCP integration",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "watch": "electron . --inspect",
+    "dist": "electron-builder"
+  },
+  "keywords": [
+    "Electron",
+    "Gemini",
+    "MCP",
+    "Chat"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^31.1.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.yourcompany.gemcpchat",
+    "productName": "GemCP Chat",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "assets/icon.icns",
+      "target": "dmg"
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": "nsis"
+    },
+    "files": [
+      "**/*",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.idea,.vscode,__pycache__,thumbs.db,.gitignore,.gitattributes,.flowconfig,.yarn-metadata.json,.idea,app-builder-bin}",
+      "!python_backend/venv",
+      "!python_backend/.venv"
+    ],
+    "extraResources": [
+      {
+        "from": "python_backend/dist/mcp_backend",
+        "to": "mcp_backend",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "katex": "^0.16.11",
+    "marked": "^13.0.2",
+    "node-fetch": "^2.7.0"
+  }
+}

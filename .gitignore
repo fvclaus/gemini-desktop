@@ -1,0 +1,5 @@
+mcp-gemini-desktop/node_modules
+python_backend/.venv
+python_backend/.env
+python_backend/uv.lock
+mcp-gemini-desktop/dist/
