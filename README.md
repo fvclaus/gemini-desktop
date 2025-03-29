@@ -4,7 +4,7 @@
   <h1>GemCP Chat</h1>
 
   <p>
-    The GemCP app is a cross-platform desktop application that creates a seamless chat interface for Google's Gemini AI models with extensible capabilities through a Multi-server Chat Protocol (MCP) framework.
+    The GemCP app is a cross-platform desktop application that creates a seamless chat interface for Google's Gemini AI models with extensible capabilities through a Model Context Protocol (MCP) framework.
   </p>
 </div>
 
