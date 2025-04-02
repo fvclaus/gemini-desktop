@@ -8,6 +8,17 @@
   </p>
 </div>
 
+## ✨ Features
+
+- **🤖 Gemini Integration:** Seamless chat interface with Google's Gemini models (configurable via Settings).
+- **🔧 Extensible Tools (MCP):** Connect external tools and data sources via the Model Context Protocol.
+  - Supports Python-based MCP servers (added via file path).
+  - Supports command-based MCP servers (e.g., Node.js) defined in a JSON configuration file.
+- **🖥️ Cross-Platform:** Runs on macOS and Windows (Electron build).
+- **📊 Tool Status UI:** Provides visual feedback when Gemini is calling an MCP tool and whether it succeeded or failed.
+- **⚙️ Model Selection:** Choose different Gemini models (e.g., 1.5 Flash, 1.5 Pro, 2.5 Pro Exp) through the Settings dialog.
+- **📝 Markdown & LaTeX Rendering:** Displays AI responses with formatting.
+
 ## Screenshots
 
 <p align="center">
@@ -144,8 +155,9 @@ The repository includes example server implementations in `mcp-gemini-desktop/mc
 
 ## License
 
-[Add license information here]
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Contributing
 
-[Add contribution guidelines here]
+Please raise PR for any contributions. Any PR raised will be reviewed and merged with the main branch.
+

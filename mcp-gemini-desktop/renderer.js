@@ -45,74 +45,256 @@ document.addEventListener("DOMContentLoaded", async () => {
     return {processedText, latexPlaceholders};
   }
 
+  // Returns the created messageDiv element
   function addMessage(text, sender) {
-    const messageDiv = document.createElement("div");
-    messageDiv.classList.add("message", sender);
+      const messageDiv = document.createElement("div");
+      // Add base 'message' class and specific sender class
+      messageDiv.classList.add("message", sender);
 
-    const toolCallPatterns = [
-      /need to make a call to the .* function/i,
-      /using the .* tool/i,
-      /calling the .* function/i,
-      /let me use the .* tool/i,
-      /i need to use the .* tool/i,
-      /to get .* i need to make a call to the .* function/i,
-    ];
+      const toolCallPatterns = [
+          /need to make a call to the .* function/i,
+          /using the .* tool/i,
+          /calling the .* function/i,
+          /let me use the .* tool/i,
+          /i need to use the .* tool/i,
+          /to get .* i need to make a call to the .* function/i,
+      ];
 
-    const isToolCallAnnouncement =
-      sender === "ai" && toolCallPatterns.some((pattern) => pattern.test(text));
-    const isSystemMessage = sender === "system";
+      // --- Tool Status Message Handling ---
+      let isToolStatusMessage = false;
+      let toolStatusType = ''; // 'start' or 'end'
+      let toolStatusDetails = '';
+      if (typeof text === 'string') {
+          if (text.startsWith("TOOL_CALL_START:")) {
+              isToolStatusMessage = true;
+              toolStatusType = 'start';
+              toolStatusDetails = text.substring("TOOL_CALL_START:".length).trim();
+              // Ensure correct classes are set
+              messageDiv.classList.remove('ai', 'user', 'system'); // Remove others if present
+              messageDiv.classList.add("system", "tool-status");
+              sender = "system tool-status"; // Update sender variable for logic below
+          } else if (text.startsWith("TOOL_CALL_END:")) {
+              isToolStatusMessage = true;
+              toolStatusType = 'end';
+              toolStatusDetails = text.substring("TOOL_CALL_END:".length).trim();
+              // Ensure correct classes are set
+              messageDiv.classList.remove('ai', 'user', 'system'); // Remove others if present
+              messageDiv.classList.add("system", "tool-status");
+              sender = "system tool-status"; // Update sender variable for logic below
+          }
+      }
+      // --- End Tool Status Message Handling ---
 
-    if (isToolCallAnnouncement || isSystemMessage) {
-      const details = document.createElement("details");
-      details.classList.add("message-details");
+      const isToolCallAnnouncement = // Keep original pattern matching for now
+          sender === "ai" && toolCallPatterns.some((pattern) => pattern.test(text));
+      const isSystemMessage = sender.startsWith("system"); // Includes "system", "system error", "system tool-status"
 
-      const summary = document.createElement("summary");
-      summary.classList.add("message-summary");
-      if (isToolCallAnnouncement) {
-        summary.textContent = "AI is using a tool...";
-      } else {
-        summary.textContent = text.startsWith("Error:")
-          ? "System Error"
-          : "System Message";
+      // Use collapsible details for system messages AND tool status messages
+      if (isSystemMessage) { // Simplified check now includes tool status
+          const details = document.createElement("details");
+          details.classList.add("message-details");
+          if (isToolStatusMessage) details.open = true; // Open tool status by default
+
+          const summary = document.createElement("summary");
+          summary.classList.add("message-summary");
+
+          // Set summary text based on type
+          if (isToolStatusMessage) {
+              const toolName = toolStatusDetails.split(' ')[0] || 'Unknown Tool';
+              if (toolStatusType === 'start') {
+                  summary.textContent = `Calling Tool: ${toolName}...`;
+              } else { // 'end'
+                  const statusPart = toolStatusDetails.split('status=')[1] || ''; // Get everything after 'status='
+                  const isError = statusPart.toLowerCase().startsWith('error');
+                  summary.textContent = `Tool Finished: ${toolName} (${isError ? 'Error' : 'Success'})`;
+                  if (isError) summary.style.color = 'var(--status-error)'; // Style error summary
+              }
+          } else if (isToolCallAnnouncement) { // Keep this for now
+              summary.textContent = "AI is using a tool...";
+          } else { // Regular system message
+              summary.textContent = text.startsWith("Error:") ? "System Error" : "System Message";
+              if (text.startsWith("Error:")) summary.style.color = 'var(--status-error)';
+          }
+
+          const detailsContent = document.createElement("div");
+          detailsContent.classList.add("message-details-content");
+          // For tool status, only show the status part in details, not the full raw result
+          if (isToolStatusMessage) {
+              const statusPart = toolStatusDetails.split('status=')[1] || toolStatusDetails; // Fallback to full details if 'status=' not found
+              detailsContent.textContent = statusPart.trim();
+              detailsContent.style.overflowWrap = 'break-word'; // Ensure status text wraps
+          } else {
+             detailsContent.textContent = text; // Show full text for regular system messages
+          }
+
+          details.appendChild(summary);
+          details.appendChild(detailsContent);
+          messageDiv.appendChild(details);
+      } else { // Regular user or AI message
+          const contentDiv = document.createElement("div");
+          contentDiv.classList.add("message-content");
+
+          if (sender === "ai") {
+              try {
+                  const {processedText, latexPlaceholders} = renderLaTeX(text);
+                  let html = marked.parse(processedText);
+                  latexPlaceholders.forEach(({placeholder, rendered}) => {
+                      html = html.replace(placeholder, rendered);
+                  });
+                  contentDiv.innerHTML = html;
+              } catch (parseError) {
+                  console.error("Error parsing AI message content:", parseError);
+                  contentDiv.textContent = text; // Fallback to raw text on error
+              }
+          } else { // User message
+              contentDiv.textContent = text;
+          }
+          messageDiv.appendChild(contentDiv);
       }
 
-      const detailsContent = document.createElement("div");
-      detailsContent.classList.add("message-details-content");
-
-      if (isToolCallAnnouncement) {
-        const {processedText, latexPlaceholders} = renderLaTeX(text);
-        let html = marked.parse(processedText);
-        latexPlaceholders.forEach(({placeholder, rendered}) => {
-          html = html.replace(placeholder, rendered);
-        });
-        detailsContent.innerHTML = html;
-      } else {
-        detailsContent.textContent = text;
-      }
-
-      details.appendChild(summary);
-      details.appendChild(detailsContent);
-      messageDiv.appendChild(details);
-    } else {
-      const contentDiv = document.createElement("div");
-      contentDiv.classList.add("message-content");
-
-      if (sender === "ai") {
-        const {processedText, latexPlaceholders} = renderLaTeX(text);
-        let html = marked.parse(processedText);
-        latexPlaceholders.forEach(({placeholder, rendered}) => {
-          html = html.replace(placeholder, rendered);
-        });
-        contentDiv.innerHTML = html;
-      } else {
-        contentDiv.textContent = text;
-      }
-      messageDiv.appendChild(contentDiv);
-    }
-
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return messageDiv; // Return the created element
   }
+
+  // --- Helper Functions defined at the correct scope ---
+
+  // Helper function to update content of an existing message div
+  function updateMessageContent(messageDiv, text, senderClass) {
+      // Clear existing content and classes related to sender/type
+      messageDiv.innerHTML = '';
+      messageDiv.className = 'message'; // Reset class list
+      messageDiv.classList.add(senderClass); // Add new sender class
+
+      // --- Tool Status Message Handling (Copied from addMessage) ---
+      let isToolStatusMessage = false;
+      let toolStatusType = '';
+      let toolStatusDetails = '';
+       if (typeof text === 'string') {
+          if (text.startsWith("TOOL_CALL_START:")) {
+              isToolStatusMessage = true;
+              toolStatusType = 'start';
+              toolStatusDetails = text.substring("TOOL_CALL_START:".length).trim();
+              senderClass = "system tool-status"; // Ensure correct class
+              messageDiv.classList.remove('ai', 'user', 'system', 'ai-loading');
+              messageDiv.classList.add("system", "tool-status");
+          } else if (text.startsWith("TOOL_CALL_END:")) {
+              isToolStatusMessage = true;
+              toolStatusType = 'end';
+              toolStatusDetails = text.substring("TOOL_CALL_END:".length).trim();
+              senderClass = "system tool-status"; // Ensure correct class
+              messageDiv.classList.remove('ai', 'user', 'system', 'ai-loading'); // Use valid class name here too
+              messageDiv.classList.add("system", "tool-status");
+          }
+      }
+      // --- End Tool Status Message Handling ---
+
+      // Re-apply rendering logic (similar to addMessage)
+      const isSystemMessage = senderClass.startsWith("system");
+      const isAiMessage = senderClass === "ai";
+
+      // Use collapsible details for system messages AND tool status messages
+      if (isSystemMessage) { // Includes tool status and errors
+          const details = document.createElement("details");
+          details.classList.add("message-details");
+          if (isToolStatusMessage) details.open = true; // Open tool status by default
+
+          const summary = document.createElement("summary");
+          summary.classList.add("message-summary");
+
+          if (isToolStatusMessage) {
+              const toolName = toolStatusDetails.split(' ')[0] || 'Unknown Tool';
+              if (toolStatusType === 'start') {
+                  summary.textContent = `Calling Tool: ${toolName}...`;
+              } else { // 'end'
+                  const statusPart = toolStatusDetails.split('status=')[1] || ''; // Get everything after 'status='
+                  const isError = statusPart.toLowerCase().startsWith('error');
+                  summary.textContent = `Tool Finished: ${toolName} (${isError ? 'Error' : 'Success'})`;
+                   if (isError) summary.style.color = 'var(--status-error)';
+              }
+          } else { // Regular system message or system error
+              summary.textContent = text.startsWith("Error:") ? "System Error" : "System Message";
+              if (senderClass === "system error" || text.startsWith("Error:")) {
+                 summary.style.color = 'var(--status-error)';
+              }
+          }
+
+          const detailsContent = document.createElement("div");
+          detailsContent.classList.add("message-details-content");
+          // For tool status, only show the status part in details
+          if (isToolStatusMessage) {
+              const statusPart = toolStatusDetails.split('status=')[1] || toolStatusDetails;
+              detailsContent.textContent = statusPart.trim();
+              detailsContent.style.overflowWrap = 'break-word'; // Ensure status text wraps
+          } else {
+             detailsContent.textContent = text; // Show full text for regular system messages
+          }
+
+          details.appendChild(summary);
+          details.appendChild(detailsContent);
+          messageDiv.appendChild(details);
+
+      } else if (isAiMessage) {
+          const contentDiv = document.createElement("div");
+          contentDiv.classList.add("message-content");
+           try {
+              const {processedText, latexPlaceholders} = renderLaTeX(text);
+              let html = marked.parse(processedText);
+              latexPlaceholders.forEach(({placeholder, rendered}) => {
+                html = html.replace(placeholder, rendered);
+              });
+              contentDiv.innerHTML = html;
+            } catch (parseError) {
+               console.error("Error parsing AI message content:", parseError);
+               contentDiv.textContent = text; // Fallback to raw text on error
+            }
+          messageDiv.appendChild(contentDiv);
+      } else { // Should primarily be 'user' or 'ai-loading'
+           messageDiv.textContent = text; // Default to text for user or loading placeholder
+      }
+      chatMessages.scrollTop = chatMessages.scrollHeight; // Ensure scroll stays at bottom
+  }
+
+
+  // Helper function to handle potentially multi-line backend responses
+  // containing status messages and the final AI reply.
+  function handleBackendResponse(loadingMessageDiv, responseText) {
+      const lines = responseText.split('\n');
+      const statusMessages = [];
+      const finalReplyLines = [];
+
+      lines.forEach(line => {
+          if (line.startsWith("TOOL_CALL_START:") || line.startsWith("TOOL_CALL_END:")) {
+              statusMessages.push(line);
+          } else if (line.trim().length > 0) { // Collect non-empty lines for final reply
+              finalReplyLines.push(line);
+          }
+      });
+
+      // Display status messages first as separate messages
+      statusMessages.forEach(statusMsg => {
+          addMessage(statusMsg, "system"); // Let addMessage handle parsing TOOL_CALL_*
+      });
+
+      // Update the original loading message with the final AI reply
+      const finalReply = finalReplyLines.join('\n').trim();
+      if (loadingMessageDiv) { // Check if loading message still exists
+          if (finalReply) {
+              updateMessageContent(loadingMessageDiv, finalReply, "ai");
+          } else if (statusMessages.length > 0) {
+              // If there were only status messages and no final reply text
+              loadingMessageDiv.remove(); // Remove the original loading message
+          } else {
+              // If the response was completely empty or just whitespace
+              updateMessageContent(loadingMessageDiv, "(Received empty response)", "system");
+          }
+      } else if (finalReply) {
+          // If loading message was removed but we have a final reply, add it
+          addMessage(finalReply, "ai");
+      }
+  }
+
+  // --- End Helper Functions ---
 
   async function sendMessage() {
     const message = messageInput.value.trim();
@@ -122,10 +304,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       return;
     }
+addMessage(message, "user");
+messageInput.value = "";
+messageInput.style.height = "auto"; // Reset height after sending
 
-    addMessage(message, "user");
-    messageInput.value = "";
-    messageInput.style.height = "auto"; // Reset height after sending
+// Add a temporary loading message for AI response
+const loadingMessageDiv = addMessage("...", "ai-loading"); // Use valid class name
 
     try {
       const response = await fetch(`http://127.0.0.1:${pythonPort}/chat`, {
@@ -144,21 +328,32 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
       }
       const data = await response.json();
-      addMessage(data.reply, "ai");
+      // Handle potential multi-line responses with status messages
+      handleBackendResponse(loadingMessageDiv, data.reply);
     } catch (error) {
       console.error("Error sending message:", error);
-      addMessage(`Error: ${error.message}`, "system");
+      // Update loading message to show error
+      if (loadingMessageDiv) { // Check if it exists before updating
+        updateMessageContent(loadingMessageDiv, `Error: ${error.message}`, "system error");
+      } else { // If loading message somehow got removed, add a new error message
+        addMessage(`Error: ${error.message}`, "system error");
+      }
     }
   }
 
-  async function deleteServer(serverPath) {
+  async function deleteServer(serverIdentifier) { // Use identifier
     if (!pythonPort) {
       addMessage("Cannot delete server: Backend not connected.", "system");
       return;
     }
 
+    // Determine display name for message (might be path or name)
+    const displayName = serverIdentifier.includes('/') || serverIdentifier.includes('\\')
+      ? serverIdentifier.split(/[\\/]/).pop()
+      : serverIdentifier;
+
     addMessage(
-      `Attempting to remove server: ${serverPath.split(/[\\/]/).pop()}`,
+      `Attempting to remove server: ${displayName}`,
       "system"
     );
     try {
@@ -167,12 +362,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({path: serverPath}),
+        body: JSON.stringify({identifier: serverIdentifier}), // Send identifier
       });
       const data = await response.json();
       if (response.ok && data.status === "success") {
         addMessage(
-          `Server ${serverPath.split(/[\\/]/).pop()} removed.`,
+          `Server ${displayName} removed.`,
           "system"
         );
         await fetchAndRenderServers(); // Refresh the list
@@ -181,6 +376,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           data.message || `Failed to remove server (status: ${response.status})`
         );
       }
+    
+      // Incorrectly nested helper functions removed from here.
+    
     } catch (error) {
       console.error("Error removing server:", error);
       addMessage(`Error removing server: ${error.message}`, "system");
@@ -193,7 +391,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (servers && servers.length > 0) {
       servers.forEach((server) => {
         const li = document.createElement("li");
-        li.dataset.path = server.path;
+        li.dataset.identifier = server.identifier; // Use identifier
         li.classList.add("server-item");
 
         const serverInfo = document.createElement("div");
@@ -201,8 +399,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const nameSpan = document.createElement("span");
         nameSpan.classList.add("server-name");
-        nameSpan.textContent = server.path.split(/[\\/]/).pop() || server.path;
-        nameSpan.title = server.path;
+        nameSpan.textContent = server.display_name; // Use display_name
+        nameSpan.title = server.identifier; // Show full identifier on hover
 
         const statusSpan = document.createElement("span");
         statusSpan.classList.add(
@@ -215,7 +413,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         deleteBtn.classList.add("delete-server-btn");
         deleteBtn.innerHTML = "×"; // Simple 'x'
         deleteBtn.title = "Remove Server";
-        deleteBtn.onclick = () => deleteServer(server.path);
+        deleteBtn.onclick = () => deleteServer(server.identifier); // Pass identifier
 
         serverInfo.appendChild(nameSpan);
         serverInfo.appendChild(statusSpan);
@@ -321,44 +519,115 @@ document.addEventListener("DOMContentLoaded", async () => {
       addMessage("Cannot add server: Backend not connected.", "system");
       return;
     }
-    const filePaths = await window.electronAPI.showOpenDialog();
+
+    // Update dialog options to accept both .py and .json
+    const dialogOptions = {
+      properties: ["openFile"],
+      filters: [
+        { name: 'MCP Server Files', extensions: ['py', 'json'] },
+        { name: 'Python Scripts', extensions: ['py'] },
+        { name: 'JSON Config', extensions: ['json'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    };
+
+    const filePaths = await window.electronAPI.showOpenDialog(dialogOptions);
+
     if (filePaths && filePaths.length > 0) {
-      const serverPath = filePaths[0];
-      console.log("Attempting to add server:", serverPath);
-      addMessage(
-        `Attempting to add server: ${serverPath.split(/[\\/]/).pop()}`,
-        "system"
-      );
-      try {
-        const response = await fetch(`http://127.0.0.1:${pythonPort}/servers`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({path: serverPath}),
-        });
-        const data = await response.json();
-        if (response.ok && data.status === "success") {
-          addMessage(
-            `Server '${
-              data.tools.length > 0 ? data.tools.join(", ") : "connected"
-            }' added from ${serverPath.split(/[\\/]/).pop()}.`,
-            "system"
-          );
-          await fetchAndRenderServers();
-          if (!serverRefreshInterval && pythonPort) {
-            serverRefreshInterval = setInterval(fetchAndRenderServers, 10000);
-            addMessage("Restarting automatic server refresh.", "system");
+      const filePath = filePaths[0];
+      const fileName = filePath.split(/[\\/]/).pop();
+
+      if (filePath.endsWith('.py')) {
+        // --- Handle Python Script ---
+        console.log("Attempting to add Python server:", filePath);
+        addMessage(`Attempting to add Python server: ${fileName}`, "system");
+        try {
+          const response = await fetch(`http://127.0.0.1:${pythonPort}/servers`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({path: filePath}), // Send path for .py
+          });
+          const data = await response.json();
+          if (response.ok && data.status === "success") {
+            addMessage(`Server added from ${fileName}. Tools: ${data.tools.length > 0 ? data.tools.join(", ") : 'None'}`, "system");
+            await fetchAndRenderServers();
+            if (!serverRefreshInterval && pythonPort) {
+              serverRefreshInterval = setInterval(fetchAndRenderServers, 10000);
+              addMessage("Restarting automatic server refresh.", "system");
+            }
+          } else {
+            throw new Error(data.message || `Failed to add server (status: ${response.status})`);
           }
-        } else {
-          throw new Error(
-            data.message || `Failed to add server (status: ${response.status})`
-          );
+        } catch (error) {
+          console.error("Error adding Python server:", error);
+          addMessage(`Error adding Python server ${fileName}: ${error.message}`, "system");
+          await fetchAndRenderServers();
         }
-      } catch (error) {
-        console.error("Error adding server:", error);
-        addMessage(`Error adding server: ${error.message}`, "system");
-        await fetchAndRenderServers();
+      } else if (filePath.endsWith('.json')) {
+        // --- Handle JSON File ---
+        console.log("Attempting to add servers from JSON:", filePath);
+        addMessage(`Attempting to add servers from JSON file: ${fileName}`, "system");
+        try {
+          const jsonContent = await window.electronAPI.readFileContent(filePath);
+          const config = JSON.parse(jsonContent);
+
+          if (!config || typeof config.mcpServers !== 'object') {
+            throw new Error("Invalid JSON format. Missing 'mcpServers' object.");
+          }
+
+          const serverNames = Object.keys(config.mcpServers);
+          if (serverNames.length === 0) {
+            addMessage(`No servers found in ${fileName}.`, "system");
+            return;
+          }
+
+          addMessage(`Found ${serverNames.length} server(s) in ${fileName}. Adding...`, "system");
+
+          let allAddedSuccessfully = true;
+          for (const serverName of serverNames) {
+            const serverDef = config.mcpServers[serverName];
+            if (!serverDef || !serverDef.command || !Array.isArray(serverDef.args)) {
+              addMessage(`Skipping invalid server definition for '${serverName}' in ${fileName}. Missing command or args.`, "system");
+              allAddedSuccessfully = false;
+              continue;
+            }
+
+            try {
+              const response = await fetch(`http://127.0.0.1:${pythonPort}/servers`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ // Send name, command, args for JSON-defined servers
+                  name: serverName,
+                  command: serverDef.command,
+                  args: serverDef.args
+                }),
+              });
+              const data = await response.json();
+              if (response.ok && data.status === "success") {
+                 addMessage(`Server '${serverName}' added. Tools: ${data.tools.length > 0 ? data.tools.join(", ") : 'None'}`, "system");
+              } else {
+                 throw new Error(data.message || `Failed to add server '${serverName}' (status: ${response.status})`);
+              }
+            } catch (serverAddError) {
+               console.error(`Error adding server '${serverName}':`, serverAddError);
+               addMessage(`Error adding server '${serverName}': ${serverAddError.message}`, "system");
+               allAddedSuccessfully = false;
+            }
+          } // End for loop
+
+          await fetchAndRenderServers(); // Refresh list after attempting all adds
+          if (allAddedSuccessfully && !serverRefreshInterval && pythonPort) {
+             serverRefreshInterval = setInterval(fetchAndRenderServers, 10000);
+             addMessage("Restarting automatic server refresh.", "system");
+          }
+
+        } catch (error) {
+          console.error("Error processing JSON server file:", error);
+          addMessage(`Error processing ${fileName}: ${error.message}`, "system");
+          await fetchAndRenderServers(); // Refresh list even on JSON processing error
+        }
+      } else {
+        addMessage(`Unsupported file type: ${fileName}. Please select a .py or .json file.`, "system");
       }
     }
   });

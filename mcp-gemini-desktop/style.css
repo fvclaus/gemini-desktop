@@ -207,6 +207,10 @@ body {
   padding: 20px 25px 15px 25px;
   border-bottom: 1px solid var(--border-color);
   text-align: center;
+  /* Prevent header from stretching excessively */
+  width: 100%;
+  box-sizing: border-box; /* Include padding in width */
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 .chat-header h1 {
@@ -258,7 +262,10 @@ body {
   border-radius: 22px;
   line-height: 1.5;
   font-size: 0.98em;
-  word-wrap: break-word;
+  word-wrap: break-word; /* Already present, good */
+  overflow-wrap: break-word; /* More robust word breaking */
+  max-width: 100%; /* Ensure content doesn't overflow parent message div */
+  box-sizing: border-box;
 }
 
 .message.user .message-content {
@@ -323,6 +330,9 @@ body {
   font-size: 0.95em;
   line-height: 1.5;
   color: var(--text-primary);
+  overflow-wrap: break-word; /* Add word breaking here too */
+  max-width: 100%; /* Ensure content doesn't overflow parent details div */
+  box-sizing: border-box;
 }
 
 .message.ai .message-details-content {
@@ -461,12 +471,13 @@ body {
   background-color: #e8e8e3;
   padding: 12px 15px;
   border-radius: 8px;
-  overflow-x: auto;
+  overflow-x: auto; /* This handles horizontal scroll for code blocks */
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier,
     monospace;
   font-size: 0.88em;
   margin: 12px 0;
   border: 1px solid var(--border-color);
+  white-space: pre; /* Ensure whitespace is preserved for scrolling */
 }
 
 .message-content code:not(pre > code),

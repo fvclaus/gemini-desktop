@@ -44,34 +44,41 @@ async def initialize_chat_app():
     return chat_app
 
 
-async def add_server_async(path):
+async def add_server_async(path=None, name=None, command=None, args=None):
     app = await initialize_chat_app()
     if not app:
         return {"status": "error", "message": "Chat app not initialized"}, 500
+
+    identifier = path if path else name
+    if not identifier:
+         return {"status": "error", "message": "Missing server identifier (path or name)"}, 400
+
     try:
-        added_tools = await app.connect_to_mcp_server(path)
-        return {"status": "success", "message": f"Server '{os.path.basename(path)}' added.", "tools": added_tools}, 200
+        added_tools = await app.connect_to_mcp_server(path=path, name=name, command=command, args=args)
+        server_display_name = os.path.basename(path) if path else name
+        return {"status": "success", "message": f"Server '{server_display_name}' added.", "tools": added_tools}, 200
     except FileNotFoundError as e:
         return {"status": "error", "message": str(e)}, 404
-    except ValueError as e:
+    except ValueError as e: # Catches issues from connect_to_mcp_server like missing params
         return {"status": "error", "message": str(e)}, 400
     except Exception as e:
-        logger.error(f"Error adding server {path}: {e}", exc_info=True)
+        logger.error(f"Error adding server {identifier}: {e}", exc_info=True)
         return {"status": "error", "message": f"Failed to add server: {e}"}, 500
 
 
-async def disconnect_server_async(path):
+async def disconnect_server_async(identifier):
     app = await initialize_chat_app()
     if not app:
         return {"status": "error", "message": "Chat app not initialized"}, 500
     try:
-        disconnected = await app.disconnect_mcp_server(path)
+        disconnected = await app.disconnect_mcp_server(identifier)
+        server_display_name = os.path.basename(identifier) if '/' in identifier or '\\' in identifier else identifier
         if disconnected:
-            return {"status": "success", "message": f"Server '{os.path.basename(path)}' disconnected."}, 200
+            return {"status": "success", "message": f"Server '{server_display_name}' disconnected."}, 200
         else:
-            return {"status": "error", "message": f"Server '{os.path.basename(path)}' not found or already disconnected."}, 404
+            return {"status": "error", "message": f"Server '{server_display_name}' not found or already disconnected."}, 404
     except Exception as e:
-        logger.error(f"Error disconnecting server {path}: {e}", exc_info=True)
+        logger.error(f"Error disconnecting server {identifier}: {e}", exc_info=True)
         return {"status": "error", "message": f"Failed to disconnect server: {e}"}, 500
 
 
@@ -80,9 +87,12 @@ async def get_servers_async():
     if not app:
         return {"status": "error", "message": "Chat app not initialized"}, 500
     servers = []
-    for path, resources in app.server_resources.items():
+    # Now iterating through identifiers (path or name)
+    for identifier, resources in app.server_resources.items():
+        server_display_name = os.path.basename(identifier) if '/' in identifier or '\\' in identifier else identifier
         servers.append({
-            "path": path,
+            "identifier": identifier, # Send the unique ID
+            "display_name": server_display_name, # Send a user-friendly name
             "tools": sorted(resources.get('tools', [])),
             "status": resources.get('status', 'unknown')
         })
@@ -113,6 +123,46 @@ async def set_api_key_async(api_key):
             f"Error setting API key and re-initializing: {e}", exc_info=True)
         return {"status": "error", "message": f"Failed to set API key: {e}"}, 500
 
+# --- Model Switching Async Functions ---
+async def set_model_async(model_name):
+    app = await initialize_chat_app()
+    if not app:
+        return {"status": "error", "message": "Chat app not initialized"}, 500
+    try:
+        app.set_gemini_model(model_name)
+        return {"status": "success", "message": f"Gemini model set to {model_name}."}, 200
+    except ValueError as e: # Catch unsupported model error
+        return {"status": "error", "message": str(e)}, 400
+    except Exception as e:
+        logger.error(f"Error setting Gemini model to {model_name}: {e}", exc_info=True)
+        return {"status": "error", "message": f"Failed to set model: {e}"}, 500
+
+async def get_model_async():
+    app = await initialize_chat_app()
+    if not app:
+        return {"status": "error", "message": "Chat app not initialized"}, 500
+    try:
+        current_model = app.get_gemini_model()
+        return {"status": "success", "model": current_model}, 200
+    except Exception as e:
+        logger.error(f"Error getting current Gemini model: {e}", exc_info=True)
+        return {"status": "error", "message": f"Failed to get model: {e}"}, 500
+
+async def list_models_async():
+    app = await initialize_chat_app()
+    if not app:
+        # Return empty list even if app not fully initialized, as the list is static for now
+        # If fetching dynamically, would return error here.
+        temp_app = MCPChatApp() # Get default list
+        return {"status": "success", "models": temp_app.get_available_models()}, 200
+        # return {"status": "error", "message": "Chat app not initialized"}, 500
+    try:
+        available_models = app.get_available_models()
+        return {"status": "success", "models": available_models}, 200
+    except Exception as e:
+        logger.error(f"Error listing available Gemini models: {e}", exc_info=True)
+        return {"status": "error", "message": f"Failed to list models: {e}"}, 500
+# --- End Model Switching Async Functions ---
 
 @flask_app.route('/chat', methods=['POST'])
 def chat():
@@ -141,44 +191,56 @@ def chat():
 def add_server():
     data = request.get_json()
     path = data.get('path')
-    if not path:
-        return jsonify({"status": "error", "message": "No server path provided."}), 400
+    name = data.get('name')
+    command = data.get('command')
+    args = data.get('args') # Expecting a list
+
     if not loop or not loop.is_running():
         return jsonify({"status": "error", "message": "Backend loop not running."}), 500
 
-    future = asyncio.run_coroutine_threadsafe(add_server_async(path), loop)
+    if path:
+        # Adding via Python script path
+        future = asyncio.run_coroutine_threadsafe(add_server_async(path=path), loop)
+        identifier_log = path
+    elif name and command and isinstance(args, list):
+        # Adding via command/args (e.g., from JSON)
+        future = asyncio.run_coroutine_threadsafe(add_server_async(name=name, command=command, args=args), loop)
+        identifier_log = name
+    else:
+        return jsonify({"status": "error", "message": "Invalid parameters. Provide either 'path' or 'name', 'command', and 'args'."}), 400
+
     try:
         result, status_code = future.result(timeout=30)
         return jsonify(result), status_code
     except asyncio.TimeoutError:
-        logger.error(f"Adding server {path} timed out.")
+        logger.error(f"Adding server {identifier_log} timed out.")
         return jsonify({"status": "error", "message": "Error: Adding server timed out."}), 504
     except Exception as e:
         logger.error(
-            f"Error getting result from add_server future: {e}", exc_info=True)
+            f"Error getting result from add_server future for {identifier_log}: {e}", exc_info=True)
         return jsonify({"status": "error", "message": f"Error adding server: {e}"}), 500
 
 
 @flask_app.route('/servers', methods=['DELETE'])
 def delete_server():
     data = request.get_json()
-    path = data.get('path')
-    if not path:
-        return jsonify({"status": "error", "message": "No server path provided for deletion."}), 400
+    identifier = data.get('identifier') # Expect 'identifier' instead of 'path'
+    if not identifier:
+        return jsonify({"status": "error", "message": "No server identifier provided for deletion."}), 400
     if not loop or not loop.is_running():
         return jsonify({"status": "error", "message": "Backend loop not running."}), 500
 
     future = asyncio.run_coroutine_threadsafe(
-        disconnect_server_async(path), loop)
+        disconnect_server_async(identifier), loop) # Pass identifier
     try:
         result, status_code = future.result(timeout=30)
         return jsonify(result), status_code
     except asyncio.TimeoutError:
-        logger.error(f"Disconnecting server {path} timed out.")
+        logger.error(f"Disconnecting server {identifier} timed out.")
         return jsonify({"status": "error", "message": "Error: Disconnecting server timed out."}), 504
     except Exception as e:
         logger.error(
-            f"Error getting result from delete_server future: {e}", exc_info=True)
+            f"Error getting result from delete_server future for {identifier}: {e}", exc_info=True)
         return jsonify({"status": "error", "message": f"Error disconnecting server: {e}"}), 500
 
 
@@ -222,6 +284,72 @@ def set_api_key():
             f"Error getting result from set_api_key future: {e}", exc_info=True)
         return jsonify({"status": "error", "message": f"Error setting API key: {e}"}), 500
 
+# --- Model Switching Endpoints ---
+@flask_app.route('/set-model', methods=['POST'])
+def set_model():
+    data = request.get_json()
+    model_name = data.get('model')
+    if not model_name:
+        return jsonify({"status": "error", "message": "No model name provided."}), 400
+    if not loop or not loop.is_running():
+        return jsonify({"status": "error", "message": "Backend loop not running."}), 500
+
+    future = asyncio.run_coroutine_threadsafe(set_model_async(model_name), loop)
+    try:
+        result, status_code = future.result(timeout=10)
+        return jsonify(result), status_code
+    except asyncio.TimeoutError:
+        logger.error(f"Setting model to {model_name} timed out.")
+        return jsonify({"status": "error", "message": "Error: Setting model timed out."}), 504
+    except Exception as e:
+        logger.error(f"Error getting result from set_model future: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": f"Error setting model: {e}"}), 500
+
+@flask_app.route('/get-model', methods=['GET'])
+def get_model():
+    if not loop or not loop.is_running():
+        return jsonify({"status": "error", "message": "Backend loop not running."}), 500
+
+    future = asyncio.run_coroutine_threadsafe(get_model_async(), loop)
+    try:
+        result, status_code = future.result(timeout=5)
+        return jsonify(result), status_code
+    except asyncio.TimeoutError:
+        logger.error("Getting current model timed out.")
+        return jsonify({"status": "error", "message": "Error: Getting current model timed out."}), 504
+    except Exception as e:
+        logger.error(f"Error getting result from get_model future: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": f"Error getting current model: {e}"}), 500
+
+@flask_app.route('/list-models', methods=['GET'])
+def list_models():
+    if not loop or not loop.is_running():
+        # Allow listing even if loop isn't fully ready, as list is static
+        pass
+        # return jsonify({"status": "error", "message": "Backend loop not running."}), 500
+
+    # Run directly if loop isn't ready, otherwise use threadsafe call
+    if loop and loop.is_running():
+        future = asyncio.run_coroutine_threadsafe(list_models_async(), loop)
+        try:
+            result, status_code = future.result(timeout=5)
+            return jsonify(result), status_code
+        except asyncio.TimeoutError:
+            logger.error("Listing models timed out.")
+            return jsonify({"status": "error", "message": "Error: Listing models timed out."}), 504
+        except Exception as e:
+            logger.error(f"Error getting result from list_models future: {e}", exc_info=True)
+            return jsonify({"status": "error", "message": f"Error listing models: {e}"}), 500
+    else:
+        # Fallback for when loop isn't running (e.g., during startup errors)
+        try:
+            temp_app = MCPChatApp()
+            models = temp_app.get_available_models()
+            return jsonify({"status": "success", "models": models}), 200
+        except Exception as e:
+            logger.error(f"Error listing models directly (no loop): {e}", exc_info=True)
+            return jsonify({"status": "error", "message": f"Error listing models: {e}"}), 500
+# --- End Model Switching Endpoints ---
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MCP Gemini Flask Backend')

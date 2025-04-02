@@ -28,12 +28,20 @@ class MCPChatApp:
         self.mcp_tools: List[Any] = []
         self.tool_to_session: Dict[str, ClientSession] = {}
         self.chat_history: List[genai_types.Content] = []
-        self.connected_server_paths: Set[str] = set()
-        self.server_resources: Dict[str, Dict[str, Any]] = {}
+        # self.connected_server_paths: Set[str] = set() # Replaced by keys of server_resources
+        self.server_resources: Dict[str, Dict[str, Any]] = {} # Key is the identifier (path or name)
         self.cached_gemini_declarations: Optional[List[genai_types.FunctionDeclaration]] = None
         self.gemini_tools_dirty: bool = True
         self.status_check_task: Optional[asyncio.Task] = None
         self.api_key: Optional[str] = None
+        # Add available models list
+        self.available_models: List[str] = [
+            "gemini-1.5-flash-latest",
+            "gemini-1.5-pro-latest",
+            # Add other desired models here, ensure they are valid for the API key/region
+            "gemini-2.0-flash",
+            "gemini-2.5-pro-exp-03-25",
+        ]
 
     async def initialize_gemini(self):
         api_key_to_use = self.api_key or os.getenv("GEMINI_API_KEY")
@@ -68,136 +76,173 @@ class MCPChatApp:
             self.api_key = None  # Revert if initialization fails
             raise
 
-    async def _check_server_status(self, path: str, session: ClientSession):
+    def set_gemini_model(self, model_name: str):
+        """Sets the Gemini model name to be used for future queries."""
+        if model_name not in self.available_models:
+             # Or fetch available models dynamically if preferred/possible
+            logger.warning(f"Attempted to set unsupported Gemini model: {model_name}")
+            raise ValueError(f"Unsupported model name: {model_name}. Available: {', '.join(self.available_models)}")
+        if model_name != self.gemini_model_name:
+            logger.info(f"Switching Gemini model from {self.gemini_model_name} to {model_name}")
+            self.gemini_model_name = model_name
+            # Optionally, clear chat history when model changes?
+            # self.chat_history = []
+            # logger.info("Chat history cleared due to model change.")
+        else:
+            logger.info(f"Gemini model is already set to {model_name}")
+
+    def get_gemini_model(self) -> str:
+        """Returns the currently configured Gemini model name."""
+        return self.gemini_model_name
+
+    def get_available_models(self) -> List[str]:
+        """Returns the list of available Gemini model names."""
+        return self.available_models
+
+    async def _check_server_status(self, identifier: str, session: ClientSession):
+        # Use identifier (path or name) for logging and access
+        server_display_name = os.path.basename(identifier) if '/' in identifier or '\\' in identifier else identifier
         try:
-            await session.list_tools()
-            if self.server_resources.get(path, {}).get('status') == 'error':
+            await session.list_tools() # Ping the server
+            if self.server_resources.get(identifier, {}).get('status') == 'error':
                 logger.info(
-                    f"Server '{os.path.basename(path)}' recovered, setting status to 'connected'.")
-                self.server_resources[path]['status'] = 'connected'
+                    f"Server '{server_display_name}' recovered, setting status to 'connected'.")
+                self.server_resources[identifier]['status'] = 'connected'
         except Exception as e:
-            if self.server_resources.get(path, {}).get('status') == 'connected':
+            if self.server_resources.get(identifier, {}).get('status') == 'connected':
                 logger.warning(
-                    f"Server '{os.path.basename(path)}' became unresponsive: {e}. Setting status to 'error'.")
-                self.server_resources[path]['status'] = 'error'
+                    f"Server '{server_display_name}' became unresponsive: {e}. Setting status to 'error'.")
+                self.server_resources[identifier]['status'] = 'error'
 
     async def _periodic_status_checker(self, interval_seconds: int = 10):
         while True:
             await asyncio.sleep(interval_seconds)
             logger.debug("Running periodic server status check...")
             tasks = []
-            for path, resources in list(self.server_resources.items()):
+            # Use identifier instead of path
+            active_servers = list(self.server_resources.items())
+            for identifier, resources in active_servers:
                 if 'session' in resources:
                     tasks.append(self._check_server_status(
-                        path, resources['session']))
+                        identifier, resources['session']))
             if tasks:
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 for i, result in enumerate(results):
                     if isinstance(result, Exception):
                         try:
-                            path = list(self.server_resources.keys())[i]
+                            # Get the identifier corresponding to the failed task
+                            failed_identifier = active_servers[i][0]
                             logger.error(
-                                f"Error during periodic status check gather for {path}: {result}", exc_info=result)
+                                f"Error during periodic status check gather for {failed_identifier}: {result}", exc_info=result)
                         except IndexError:
                             logger.error(
-                                f"Error during periodic status check gather (index {i}): {result}", exc_info=result)
+                                f"Error during periodic status check gather (index {i}, result: {result}) - identifier mapping failed", exc_info=result)
             logger.debug("Periodic server status check finished.")
 
-    async def connect_to_mcp_server(self, server_script_path: str) -> List[str]:
-        if not os.path.exists(server_script_path):
-            logger.error(f"MCP server script not found: {server_script_path}")
-            raise FileNotFoundError(
-                f"Server script not found: {server_script_path}")
+    async def connect_to_mcp_server(self, path: Optional[str] = None, name: Optional[str] = None, command: Optional[str] = None, args: Optional[List[str]] = None) -> List[str]:
+        identifier = path if path else name
+        if not identifier:
+            raise ValueError("Either 'path' or 'name' must be provided.")
 
-        if server_script_path in self.connected_server_paths:
+        if identifier in self.server_resources:
+            server_display_name = os.path.basename(path) if path else name
             logger.warning(
-                f"Server script '{server_script_path}' is already connected. Skipping.")
+                f"Server '{server_display_name}' ({identifier}) is already connected. Skipping.")
             raise ValueError(
-                f"Server '{os.path.basename(server_script_path)}' is already connected.")
+                f"Server '{server_display_name}' is already connected.")
 
-        is_python = server_script_path.endswith('.py')
-        is_js = server_script_path.endswith('.js')
-        if not (is_python or is_js):
-            logger.warning(
-                f"Unsupported server script type: {server_script_path}. Skipping.")
-            raise ValueError(
-                f"Unsupported server script type: {server_script_path}")
+        command_list: List[str] = []
+        if path:
+            if not os.path.exists(path):
+                logger.error(f"MCP server script not found: {path}")
+                raise FileNotFoundError(f"Server script not found: {path}")
+            # Assume python if path is given for now, could add more checks
+            command_to_use = sys.executable
+            command_list = [command_to_use, path]
+            logger.info(f"Preparing to connect via path: {path} using '{command_to_use}'")
+        elif name and command and args is not None:
+            command_list = [command] + args
+            logger.info(f"Preparing to connect via command: name='{name}', command='{command}', args={args}")
+        else:
+            raise ValueError("Invalid parameters. Provide either 'path' or ('name', 'command', 'args').")
 
-        command = sys.executable if is_python else "node"
         server_params = StdioServerParameters(
-            command=command,
-            args=[server_script_path],
-            env=None
+            command=command_list[0],
+            args=command_list[1:],
+            env=None # Consider allowing env vars later if needed
         )
 
         server_stack = AsyncExitStack()
-        added_to_connected_paths = False
         try:
-            logger.info(
-                f"Connecting to MCP server: {server_script_path} using '{command}'")
+            logger.info(f"Connecting to MCP server: {identifier}")
             stdio_transport = await server_stack.enter_async_context(stdio_client(server_params))
             stdio, write = stdio_transport
             session = await server_stack.enter_async_context(ClientSession(stdio, write))
             await session.initialize()
-            logger.info(f"Connected to MCP server: {server_script_path}")
+            logger.info(f"Connected to MCP server: {identifier}")
 
-            self.connected_server_paths.add(server_script_path)
-            added_to_connected_paths = True
+            # Add to resources immediately after successful connection
+            self.server_resources[identifier] = {
+                'session': session,
+                'stack': server_stack,
+                'tools': [], # Will be populated below
+                'status': 'connected',
+                'command_list': command_list # Store how it was launched
+            }
 
             response = await session.list_tools()
             server_tools = response.tools
             logger.info(
-                f"Server {server_script_path} provides tools: {[tool.name for tool in server_tools]}")
+                f"Server {identifier} provides tools: {[tool.name for tool in server_tools]}")
 
             added_tools_names = []
             for tool in server_tools:
                 if tool.name in self.tool_to_session:
                     logger.warning(
-                        f"Tool name conflict: '{tool.name}' already exists. Skipping tool from {server_script_path}.")
+                        f"Tool name conflict: '{tool.name}' already exists. Skipping tool from {identifier}.")
                 else:
                     self.mcp_tools.append(tool)
                     self.tool_to_session[tool.name] = session
                     added_tools_names.append(tool.name)
                     self.gemini_tools_dirty = True
 
-            self.server_resources[server_script_path] = {
-                'session': session,
-                'stack': server_stack,
-                'tools': added_tools_names,
-                'status': 'connected',
-            }
-            logger.info(f"Stored resources for server: {server_script_path}")
+            # Update the tools list for the server
+            self.server_resources[identifier]['tools'] = added_tools_names
+            logger.info(f"Stored resources for server: {identifier}")
             return added_tools_names
+
         except Exception as e:
             logger.error(
-                f"Failed to connect to or initialize MCP server {server_script_path}: {e}", exc_info=True)
-            await server_stack.aclose()
-            if added_to_connected_paths:
-                self.connected_server_paths.discard(server_script_path)
-                logger.info(
-                    f"Removed {server_script_path} from connected_server_paths due to connection error after initial add.")
+                f"Failed to connect to or initialize MCP server {identifier}: {e}", exc_info=True)
+            # Ensure resources are cleaned up if connection fails
+            if identifier in self.server_resources:
+                 # If it got added before the exception
+                 res = self.server_resources.pop(identifier)
+                 await res['stack'].aclose() # Close stack if it exists
+            else:
+                 # If exception happened before adding to resources, just close stack
+                 await server_stack.aclose()
             raise
 
-    async def disconnect_mcp_server(self, server_script_path: str) -> bool:
-        if server_script_path not in self.server_resources:
+    async def disconnect_mcp_server(self, identifier: str) -> bool:
+        if identifier not in self.server_resources:
             logger.warning(
-                f"Attempted to disconnect non-existent server: {server_script_path}")
+                f"Attempted to disconnect non-existent server: {identifier}")
             return False
 
-        logger.info(f"Disconnecting MCP server: {server_script_path}")
-        resources = self.server_resources.pop(server_script_path)
+        logger.info(f"Disconnecting MCP server: {identifier}")
+        resources = self.server_resources.pop(identifier)
         stack = resources['stack']
         tools_to_remove = resources['tools']
 
         try:
-            await stack.aclose()
+            await stack.aclose() # This should terminate the process via stdio closing
             logger.info(
-                f"Successfully closed resources for server: {server_script_path}")
+                f"Successfully closed resources for server: {identifier}")
         except Exception as e:
             logger.error(
-                f"Error closing resources for server {server_script_path}: {e}", exc_info=True)
-
-        self.connected_server_paths.discard(server_script_path)
+                f"Error closing resources for server {identifier}: {e}", exc_info=True)
+        # No need to discard from connected_server_paths anymore
 
         self.mcp_tools = [
             tool for tool in self.mcp_tools if tool.name not in tools_to_remove]
@@ -207,9 +252,9 @@ class MCPChatApp:
         if tools_to_remove:
             self.gemini_tools_dirty = True
             logger.info(
-                f"Removed tools from disconnected server {server_script_path}: {tools_to_remove}")
+                f"Removed tools from disconnected server {identifier}: {tools_to_remove}")
 
-        logger.info(f"Successfully disconnected server: {server_script_path}")
+        logger.info(f"Successfully disconnected server: {identifier}")
         return True
 
     def get_gemini_tool_declarations(self) -> List[genai_types.FunctionDeclaration]:
@@ -257,10 +302,22 @@ class MCPChatApp:
                     mcp_type = prop_schema_dict.get('type', '').lower()
                     gemini_type_str = type_mapping.get(mcp_type)
 
+                    # *** FIX START ***
+                    # If MCP type is 'object' but has no defined sub-properties, treat as STRING for Gemini
+                    if mcp_type == 'object' and not prop_schema_dict.get('properties'):
+                        logger.warning(f"Property '{prop_name}' in tool '{mcp_tool.name}' is MCP type 'object' with no sub-properties. Mapping to Gemini STRING type.")
+                        gemini_type_str = 'STRING' # Override to STRING
+                    # *** FIX END ***
+
                     if gemini_type_str:
+                        # For OBJECT types mapped to STRING, adjust description
+                        description = prop_schema_dict.get('description', '')
+                        if gemini_type_str == 'STRING' and mcp_type == 'object':
+                            description += " (Provide as JSON string)"
+
                         gemini_properties[prop_name] = genai_types.Schema(
                             type=gemini_type_str,
-                            description=prop_schema_dict.get('description')
+                            description=description.strip() or None # Ensure None if empty
                         )
                         valid_properties_found = True
                     else:
@@ -294,44 +351,58 @@ class MCPChatApp:
         logger.info(f"Cached {len(declarations)} Gemini tool declarations.")
         return declarations
 
-    async def execute_mcp_tool(self, tool_name: str, args: Dict[str, Any]) -> Optional[str]:
+    async def execute_mcp_tool(self, tool_name: str, args: Dict[str, Any]) -> Tuple[str, Optional[str]]:
+        """Executes an MCP tool and returns a tuple: (status_string, result_content_or_none)."""
         if tool_name not in self.tool_to_session:
             logger.error(
                 f"Attempted to call unknown or disconnected MCP tool: {tool_name}")
-            return f"Error: Tool '{tool_name}' not found or its server is disconnected."
+            error_msg = f"Error: Tool '{tool_name}' not found or its server is disconnected."
+            return error_msg, None # Return error status and None content
 
         session = self.tool_to_session[tool_name]
-        server_path = None
-        for path, resources in self.server_resources.items():
+        server_identifier = None
+        for identifier, resources in self.server_resources.items():
             if resources['session'] == session:
-                server_path = path
+                server_identifier = identifier
                 break
 
-        if not server_path:
+        if not server_identifier:
             logger.error(
-                f"Could not find server path for tool '{tool_name}' with session {session}. This shouldn't happen.")
-            return f"Error: Internal error finding server for tool '{tool_name}'."
+                f"Could not find server identifier for tool '{tool_name}' with session {session}. This shouldn't happen.")
+            error_msg = f"Error: Internal error finding server for tool '{tool_name}'."
+            return error_msg, None # Return error status and None content
 
         try:
             logger.info(f"Executing MCP tool '{tool_name}' with args: {args}")
             response = await session.call_tool(tool_name, args)
             logger.info(f"MCP tool '{tool_name}' executed successfully.")
-            if self.server_resources[server_path]['status'] == 'error':
-                logger.info(
-                    f"Server '{os.path.basename(server_path)}' recovered, setting status to 'connected'.")
-                self.server_resources[server_path]['status'] = 'connected'
-            return response.content
+            # Check if server recovered after successful call
+            if self.server_resources[server_identifier]['status'] == 'error':
+                 server_display_name = os.path.basename(server_identifier) if '/' in server_identifier or '\\' in server_identifier else server_identifier
+                 logger.info(
+                    f"Server '{server_display_name}' recovered, setting status to 'connected'.")
+                 self.server_resources[server_identifier]['status'] = 'connected'
+            # Assuming response.content is the string result or similar primitive
+            result_content = str(response.content) if response.content is not None else ""
+            # Return "Success" status and the actual content
+            return "Success", result_content
         except Exception as e:
             logger.error(
-                f"Error executing MCP tool '{tool_name}' on server '{server_path}': {e}", exc_info=True)
-            if server_path:
-                self.server_resources[server_path]['status'] = 'error'
-            return f"Error executing tool '{tool_name}': {e}"
+                f"Error executing MCP tool '{tool_name}' on server '{server_identifier}': {e}", exc_info=True)
+            if server_identifier: # Check if identifier exists before setting status
+                self.server_resources[server_identifier]['status'] = 'error'
+            # Return error status string and None content
+            error_msg = f"Error executing tool '{tool_name}': {e}"
+            return error_msg, None
 
     async def process_query(self, query: str) -> str:
+        logger.info(f"Processing query: '{query}'") # Add logging
         if not self.gemini_client:
+            logger.error("process_query called but Gemini client not initialized.")
             return "Error: Gemini client not initialized. Please set your API key via settings."
 
+        # Append user message
+        logger.debug("Appending user message to history.")
         self.chat_history.append(genai_types.Content(
             role="user", parts=[genai_types.Part(text=query)]))
 
@@ -342,13 +413,20 @@ class MCPChatApp:
             tools=gemini_tools) if gemini_tools else None
 
         try:
+            # Ensure the currently set model name is used
+            logger.debug(f"Generating content with model: {self.gemini_model_name}")
+            logger.info(f"Sending request to Gemini model: {self.gemini_model_name}")
+            logger.debug(f"Request contents: {self.chat_history}")
+            logger.debug(f"Request config: {config}")
             response = await self.gemini_client.models.generate_content(
-                model=self.gemini_model_name,
+                model=self.gemini_model_name, # Uses the instance variable
                 contents=self.chat_history,
                 config=config,
             )
 
+            logger.debug(f"Received Gemini response: {response}")
             if not response.candidates or not response.candidates[0].content:
+                logger.warning("Gemini response missing candidates or content.")
                 feedback = response.prompt_feedback if hasattr(
                     response, 'prompt_feedback') else None
                 if feedback and feedback.block_reason:
@@ -376,29 +454,50 @@ class MCPChatApp:
             ]
 
             if function_calls_to_execute:
+                logger.info(f"Gemini requested {len(function_calls_to_execute)} tool call(s).")
                 tool_response_parts = []
+                tool_status_messages = [] # Store status messages for prepending
+
                 for function_call in function_calls_to_execute:
                     tool_name = function_call.name
                     tool_args = dict(function_call.args)
-                    logger.info(
-                        f"Gemini requested tool call: {tool_name} with args: {tool_args}")
-                    tool_result = await self.execute_mcp_tool(tool_name, tool_args)
+                    logger.info(f"Preparing tool call: {tool_name} with args: {tool_args}")
+                    # Add start message
+                    tool_status_messages.append(f"TOOL_CALL_START: {tool_name} args={tool_args}")
+
+                    # Execute tool and get both status and content
+                    tool_status_str, tool_content = await self.execute_mcp_tool(tool_name, tool_args)
+                    logger.info(f"Tool '{tool_name}' execution finished with status: {tool_status_str}")
+
+                    # Add end message using only the status string
+                    tool_status_messages.append(f"TOOL_CALL_END: {tool_name} status={tool_status_str}")
+
+                    # Prepare the result for Gemini. Use the actual content on success,
+                    # or the error status string on failure.
+                    gemini_tool_result_content = tool_content if tool_status_str == "Success" else tool_status_str
+
                     tool_response_parts.append(genai_types.Part.from_function_response(
                         name=tool_name,
-                        response={
-                            "result": tool_result if tool_result is not None else "Error executing tool."},
+                        response={"result": gemini_tool_result_content}, # Send actual content or error string
                     ))
 
                 if tool_response_parts:
+                    logger.debug("Appending tool responses to history.")
                     self.chat_history.append(genai_types.Content(
                         role="tool", parts=tool_response_parts))
+
+                    # Ensure the currently set model name is used after tool call
+                    logger.info(f"Sending tool results back to Gemini model: {self.gemini_model_name}")
+                    logger.debug(f"Request contents (with tool results): {self.chat_history}")
                     response = await self.gemini_client.models.generate_content(
-                        model=self.gemini_model_name,
+                        model=self.gemini_model_name, # Uses the instance variable
                         contents=self.chat_history,
                         config=config,
                     )
 
+                    logger.debug(f"Received Gemini response after tool call: {response}")
                     if not response.candidates or not response.candidates[0].content:
+                        logger.warning("Gemini response missing candidates or content after tool call.")
                         feedback = response.prompt_feedback if hasattr(
                             response, 'prompt_feedback') else None
                         if feedback and feedback.block_reason:
@@ -425,17 +524,25 @@ class MCPChatApp:
 
                     self.chat_history.append(final_model_content)
                     if final_model_content.parts and hasattr(final_model_content.parts[0], 'text') and final_model_content.parts[0].text is not None:
-                        return final_model_content.parts[0].text
+                        final_reply_text = final_model_content.parts[0].text
+                        logger.info("Received final text response from Gemini after tool call.")
                     else:
-                        return "Received empty response after tool call (no text part)."
+                        logger.warning("Final Gemini response after tool call has no text part.")
+                        final_reply_text = "Received empty response after tool call (no text part)."
+
+                    # Prepend status messages to the final reply
+                    status_prefix = "\n".join(tool_status_messages) + "\n\n" if tool_status_messages else ""
+                    return status_prefix + final_reply_text
                 else:
                     logger.error(
                         "function_calls_to_execute was present, but tool_response_parts became empty.")
                     return "Error: Tool calls were requested but no responses could be generated."
 
             elif model_content.parts and hasattr(model_content.parts[0], 'text') and model_content.parts[0].text is not None:
+                logger.info("Received standard text response from Gemini (no tool call).")
                 return model_content.parts[0].text
             else:
+                logger.warning("Received Gemini response with no text part and no tool call.")
                 return "Received response with no text."
 
         except genai_errors.APIError as e:
@@ -461,7 +568,7 @@ class MCPChatApp:
                 logger.error(
                     f"Error during status checker task cleanup: {e}", exc_info=True)
             self.status_check_task = None
-        server_paths = list(self.server_resources.keys())
-        for path in server_paths:
-            await self.disconnect_mcp_server(path)
+        server_identifiers = list(self.server_resources.keys())
+        for identifier in server_identifiers:
+            await self.disconnect_mcp_server(identifier)
         logger.info("MCPChatApp cleanup complete.")

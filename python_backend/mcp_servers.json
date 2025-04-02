@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "fetch": {
+      "command": "node",
+      "args": ["/Users/kkrish/Documents/tcs-demo/fetch-mcp/dist/index.js"],
+      "alwaysAllow": ["fetch_markdown"],
+      "disabled": false
+    }
+  }
+}
