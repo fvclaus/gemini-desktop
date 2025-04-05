@@ -1,3 +1,4 @@
+.DS_Store
 mcp-gemini-desktop/node_modules
 python_backend/.venv
 python_backend/.env
