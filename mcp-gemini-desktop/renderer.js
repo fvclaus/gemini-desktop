@@ -9,9 +9,98 @@ document.addEventListener("DOMContentLoaded", async () => {
   const addServerBtn = document.getElementById("add-server-btn");
   const serverList = document.getElementById("server-list");
   const settingsBtn = document.getElementById("settings-btn");
+  const selectWorkspaceBtn = document.getElementById("select-workspace-btn");
+  const currentWorkspaceNameSpan = document.getElementById("current-workspace-name");
 
   let pythonPort = null;
   let serverRefreshInterval = null;
+  let recentWorkspaces = [];
+  const MAX_RECENT_WORKSPACES = 10;
+
+  // --- Workspace Functions ---
+
+  function updateWorkspaceDisplay(workspacePath) {
+    if (workspacePath) {
+      const folderName = workspacePath.split(/[\\/]/).pop();
+      currentWorkspaceNameSpan.textContent = folderName;
+      currentWorkspaceNameSpan.title = workspacePath;
+    } else {
+      currentWorkspaceNameSpan.textContent = "No workspace selected";
+      currentWorkspaceNameSpan.title = "";
+    }
+  }
+
+  async function setWorkspaceOnBackend(workspacePath) {
+    if (!pythonPort) {
+      addMessage("Error: Backend not connected. Cannot set workspace.", "system error");
+      return false;
+    }
+    if (!workspacePath) {
+        addMessage("Error: No workspace path provided.", "system error");
+        updateWorkspaceDisplay(null); // Clear display
+        return false;
+    }
+
+    addMessage(`Setting workspace to: ${workspacePath}`, "system");
+    try {
+      const response = await fetch(`http://127.0.0.1:${pythonPort}/set-workspace`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspace_path: workspacePath }),
+      });
+      const data = await response.json();
+      if (response.ok && data.status === "success") {
+        addMessage(`Workspace set to ${data.message.split("'")[1]}. Filesystem tools: ${data.tools ? data.tools.join(", ") : 'None'}`, "system");
+        updateWorkspaceDisplay(workspacePath);
+        addRecentWorkspace(workspacePath);
+        await fetchAndRenderServers(); // Refresh server list as filesystem tools are now (re)registered
+        return true;
+      } else {
+        throw new Error(data.message || `Failed to set workspace (status: ${response.status})`);
+      }
+    } catch (error) {
+      console.error("Error setting workspace:", error);
+      addMessage(`Error setting workspace: ${error.message}`, "system error");
+      updateWorkspaceDisplay(null); // Clear display on error
+      // Potentially remove the problematic path from recent if it was just added
+      return false;
+    }
+  }
+
+  function loadRecentWorkspaces() {
+    const stored = localStorage.getItem("recentWorkspaces");
+    if (stored) {
+      recentWorkspaces = JSON.parse(stored);
+    }
+    // TODO: Populate a dropdown/list for recent workspaces if UI element is added
+  }
+
+  function addRecentWorkspace(workspacePath) {
+    if (!workspacePath) return;
+    // Remove if already exists to move it to the top
+    recentWorkspaces = recentWorkspaces.filter(p => p !== workspacePath);
+    recentWorkspaces.unshift(workspacePath); // Add to the beginning
+    if (recentWorkspaces.length > MAX_RECENT_WORKSPACES) {
+      recentWorkspaces.pop(); // Remove the oldest if limit exceeded
+    }
+    localStorage.setItem("recentWorkspaces", JSON.stringify(recentWorkspaces));
+    // TODO: Update recent workspaces dropdown/list UI if added
+  }
+
+
+  async function handleSelectWorkspace() {
+    const dialogOptions = {
+      properties: ["openDirectory"],
+      title: "Select Workspace Folder",
+    };
+    const result = await window.electronAPI.showOpenDialog(dialogOptions);
+    if (result && result.length > 0) {
+      const selectedPath = result[0];
+      await setWorkspaceOnBackend(selectedPath);
+    }
+  }
+
+  // --- End Workspace Functions ---
 
   function renderLaTeX(text) {
     const latexPlaceholders = [];
@@ -479,21 +568,43 @@ const loadingMessageDiv = addMessage("...", "ai-loading"); // Use valid class na
   }
 
   async function initializeApp() {
+    loadRecentWorkspaces(); // Load recent workspaces first
     try {
       pythonPort = await window.electronAPI.getPythonPort();
       console.log(`Python backend running on port: ${pythonPort}`);
-      addMessage("Welcome to GemCP Chat!", "ai"); // Changed from "system" to "ai"
-      await fetchAndRenderServers();
-      if (!serverRefreshInterval) {
+      addMessage("Welcome to GemCP Chat!", "ai");
+
+      // Attempt to set the most recent workspace on startup, if available
+      if (recentWorkspaces.length > 0) {
+        const success = await setWorkspaceOnBackend(recentWorkspaces[0]);
+        if (!success) {
+            // If setting the most recent failed (e.g., path no longer valid),
+            // prompt user to select one.
+            addMessage("Could not load the last workspace. Please select a new one.", "system");
+            updateWorkspaceDisplay(null);
+            // Do not call handleSelectWorkspace() automatically here, let user click.
+        }
+      } else {
+        addMessage("No recent workspace found. Please select a workspace to begin.", "system");
+        updateWorkspaceDisplay(null);
+      }
+      // fetchAndRenderServers is now called by setWorkspaceOnBackend or if no workspace is set initially.
+      // If no workspace is set, server list will be fetched but filesystem tools won't be there.
+      if (currentWorkspaceNameSpan.textContent === "No workspace selected") {
+          await fetchAndRenderServers(); // Fetch other servers if no workspace was set
+      }
+
+      if (!serverRefreshInterval && pythonPort) { // Ensure pythonPort is available
         serverRefreshInterval = setInterval(fetchAndRenderServers, 10000);
       }
     } catch (error) {
       console.error("Error initializing app:", error);
       addMessage(
         "Error connecting to backend. Please ensure it is running.",
-        "system"
+        "system error"
       );
       renderServerList([]);
+      updateWorkspaceDisplay(null);
       if (serverRefreshInterval) {
         clearInterval(serverRefreshInterval);
         serverRefreshInterval = null;
@@ -501,6 +612,7 @@ const loadingMessageDiv = addMessage("...", "ai-loading"); // Use valid class na
     }
   }
 
+  selectWorkspaceBtn.addEventListener("click", handleSelectWorkspace);
   sendBtn.addEventListener("click", sendMessage);
   messageInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {

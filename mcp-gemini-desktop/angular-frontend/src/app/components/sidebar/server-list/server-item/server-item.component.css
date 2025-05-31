@@ -1,0 +1,35 @@
+/* Styles for ServerItemComponent */
+:host .mat-mdc-list-item-line { /* Target the line content within the host */
+  white-space: normal !important; /* Allow tool list to wrap if needed */
+  /* display: block !important; /* Ensure it takes block characteristics for layout */
+}
+
+.server-name-material {
+  font-weight: 500; /* Or let Material theme handle */
+}
+
+.mat-mdc-chip.connected {
+  background-color: var(--status-connected) !important; /* Use CSS var from :root */
+  color: white !important;
+}
+
+.mat-mdc-chip.error {
+  background-color: var(--status-error) !important; /* Use CSS var from :root */
+  color: white !important;
+}
+
+.tools-title-material {
+  font-size: 0.875rem; /* Material caption size */
+  /* color: rgba(0,0,0,0.54); /* Let Material theme handle text color */
+  margin-bottom: 4px;
+  display: block; /* Ensure it takes its own line */
+}
+
+/* Adjust chip sizes if default is too large for this context */
+/*
+:host .mat-mdc-chip {
+  padding: 4px 8px !important;
+  height: 24px !important;
+  font-size: 0.8em !important;
+}
+*/

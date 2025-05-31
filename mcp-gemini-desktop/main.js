@@ -1,9 +1,16 @@
 // main.js
-const {app, BrowserWindow, ipcMain, dialog} = require("electron");
-const path = require("path");
-const fs = require("fs").promises; // Import fs promises
-const fetch = require("node-fetch");
+import {app, BrowserWindow, ipcMain, dialog} from "electron";
+import path from "path";
+import fs from "fs/promises";
+import fetch from "node-fetch";
+import Store from "electron-store";
 
+// For ESM __dirname equivalent
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const store = new Store();
 let mainWindow;
 let settingsWindow = null;
 const pythonPort = 5001;
@@ -28,7 +35,7 @@ function createSettingsWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    backgroundColor: "#f4f1e7",
+    // backgroundColor: "#f4f1e7", // Let HTML/CSS define background
   });
 
   settingsWindow.loadFile(path.join(__dirname, "settings.html"));
@@ -47,6 +54,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    show: false, // Initially hide the window
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -57,7 +65,7 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     title: "GemCP Chat",
-    backgroundColor: "#fdfcf7",
+    // backgroundColor: "#fdfcf7", // Let the Angular app's theme define background
     icon: path.join(
       __dirname,
       "assets",
@@ -66,25 +74,41 @@ function createWindow() {
   });
   console.log("[createWindow] BrowserWindow created.");
 
-  const indexPath = path.join(__dirname, "index.html");
-  console.log(`[createWindow] Attempting to load file: ${indexPath}`);
-  mainWindow
-    .loadFile(indexPath)
-    .then(() => {
-      console.log("[createWindow] index.html loaded successfully.");
-    })
-    .catch((err) => {
-      console.error("[createWindow] Error loading index.html:", err);
+  async function loadContent() {
+    const isDev = process.env.NODE_ENV === 'development';
+    let loadPromise;
+
+    if (isDev) {
+      console.log("[createWindow] Development mode: Attempting to load URL http://localhost:4200");
+      loadPromise = mainWindow.loadURL("http://localhost:4200");
+    } else {
+      const indexPath = path.join(__dirname, "angular-frontend/dist/angular-frontend/browser/index.html");
+      console.log(`[createWindow] Production mode: Attempting to load file: ${indexPath}`);
+      loadPromise = mainWindow.loadFile(indexPath);
+    }
+
+    try {
+      await loadPromise;
+      console.log("[createWindow] Content loaded successfully.");
+      mainWindow.show(); // Show window after content is loaded
+      console.log("[createWindow] mainWindow.show() called after content load.");
+      // Initial workspace path is now fetched by the renderer via IPC.
+
+      if (isDev || !app.isPackaged) {
+        mainWindow.webContents.openDevTools();
+      }
+    } catch (err) {
+      console.error("[createWindow] Error loading content:", err);
       dialog.showErrorBox(
         "Loading Error",
-        `Failed to load index.html: ${err.message}`
+        `Failed to load application content: ${err.message}`
       );
-    });
-
-  // Only open DevTools if not packaged
-  if (!app.isPackaged) {
-    mainWindow.webContents.openDevTools();
+      app.quit();
+    }
   }
+
+  loadContent();
+
 
   mainWindow.on("closed", () => {
     console.log("[createWindow] Main window closed.");
@@ -94,11 +118,12 @@ function createWindow() {
     }
   });
 
-  mainWindow.on("ready-to-show", () => {
-    console.log("[createWindow] Main window ready-to-show.");
-    mainWindow.show();
-    console.log("[createWindow] mainWindow.show() called after ready-to-show.");
-  });
+  // mainWindow.on("ready-to-show", () => {
+  //   // This is now handled after content load and workspace selection
+  //   // console.log("[createWindow] Main window ready-to-show.");
+  //   // mainWindow.show();
+  //   // console.log("[createWindow] mainWindow.show() called after ready-to-show.");
+  // });
 
   mainWindow.webContents.on(
     "did-fail-load",
@@ -106,10 +131,11 @@ function createWindow() {
       console.error(
         `[createWindow] Failed to load URL: ${validatedURL}, Error Code: ${errorCode}, Description: ${errorDescription}`
       );
-      dialog.showErrorBox(
-        "Load Failed",
-        `Failed to load content: ${errorDescription}`
-      );
+      // Error handling is now more integrated into the loading promise
+      // dialog.showErrorBox(
+      //   "Load Failed",
+      //   `Failed to load content: ${errorDescription}`
+      // );
     }
   );
 }
@@ -139,23 +165,70 @@ ipcMain.handle("get-python-port", async () => {
   return pythonPort;
 });
 
-ipcMain.handle("show-open-dialog", async (event, options) => {
-  // Default options if none provided (for backward compatibility or other uses)
-  const defaultOptions = {
-    properties: ["openFile"],
-    filters: [{ name: 'Python Scripts', extensions: ['py'] }]
-  };
-  const dialogOptions = options || defaultOptions;
+ipcMain.handle("get-initial-workspace", async () => {
+  console.log("[get-initial-workspace] Renderer requested initial workspace path.");
+  const currentWorkspace = store.get("lastOpenedWorkspace");
+  if (currentWorkspace) {
+    try {
+      const stats = await fs.stat(currentWorkspace);
+      if (stats.isDirectory()) {
+        console.log(`[get-initial-workspace] Returning stored workspace: ${currentWorkspace}`);
+        return currentWorkspace;
+      } else {
+        console.log(`[get-initial-workspace] Stored workspace path '${currentWorkspace}' is not a directory. Clearing and returning null.`);
+        store.delete("lastOpenedWorkspace");
+        return null;
+      }
+    } catch (error) {
+      console.warn(`[get-initial-workspace] Error verifying stored workspace '${currentWorkspace}'. Clearing and returning null:`, error.message);
+      store.delete("lastOpenedWorkspace");
+      return null;
+    }
+  } else {
+    console.log("[get-initial-workspace] No workspace stored. Returning null.");
+    return null;
+  }
+});
 
-  // Ensure mainWindow is used if available
-  const window = mainWindow || BrowserWindow.getFocusedWindow();
-  if (!window) {
-      console.error("show-open-dialog: No window available to show dialog.");
-      return []; // Return empty array or handle error as appropriate
+// This specific "change-workspace" might involve more than just opening a dialog,
+// like reloading the app, so we keep it distinct.
+// The Angular app will call this, which in turn uses `select-workspace-dialog`
+// and then reloads.
+ipcMain.handle("change-workspace-and-reload", async () => {
+  console.log("[change-workspace-and-reload] User requested to change workspace.");
+  if (!mainWindow) {
+    console.error("[change-workspace-and-reload] mainWindow is not available.");
+    return null;
+  }
+  // We can reuse the select-workspace-dialog logic here or call it directly
+  // For now, let's keep it simple and assume the renderer calls select-workspace-dialog first,
+  // then if a path is returned, it calls this to confirm and reload.
+  // Or, this function itself can orchestrate.
+  // Let's make it orchestrate:
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ["openDirectory"],
+    title: "Select New Workspace Folder",
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    console.log("[change-workspace-and-reload] User cancelled workspace selection.");
+    return store.get("lastOpenedWorkspace"); // Return current one if cancelled
   }
 
-  const result = await dialog.showOpenDialog(window, dialogOptions);
-  return result.filePaths;
+  const newWorkspacePath = result.filePaths[0];
+  const oldWorkspacePath = store.get("lastOpenedWorkspace");
+
+  if (newWorkspacePath !== oldWorkspacePath) {
+    store.set("lastOpenedWorkspace", newWorkspacePath);
+    console.log(`[change-workspace-and-reload] Workspace changed to: ${newWorkspacePath}. Reloading app.`);
+    mainWindow.webContents.send("workspace-selected", newWorkspacePath); // Inform before reload
+    mainWindow.reload();
+    return newWorkspacePath;
+  } else {
+    console.log(`[change-workspace-and-reload] Selected workspace is the same as current. No change.`);
+    return oldWorkspacePath;
+  }
 });
 
 ipcMain.handle("open-settings-dialog", () => {

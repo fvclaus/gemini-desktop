@@ -1,0 +1,47 @@
+:host {
+  display: flex; /* Ensure the host element behaves as a flex container for the wrapper */
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden; /* Contained scroll within server list */
+}
+
+.sidebar-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden; /* Children will manage their own scroll if necessary */
+}
+
+.sidebar-toolbar.mat-toolbar {
+  flex-shrink: 0; /* Prevent toolbars from shrinking */
+  /* Material theme handles background and text color */
+}
+.sidebar-toolbar.mat-toolbar span {
+  font-weight: 500; /* Material's medium weight for titles */
+}
+
+.sidebar-section {
+  padding: 16px;
+  flex-shrink: 0;
+}
+
+.server-list-container-material {
+  flex-grow: 1; /* Allow list to take available space */
+  overflow-y: auto; /* Enable scrolling for server list */
+}
+.server-list-container-material .mat-mdc-list-base {
+  padding-top: 0; /* Remove default padding if Material adds it */
+}
+
+.sidebar-footer-material {
+  padding: 16px;
+  border-top: 1px solid rgba(0,0,0,0.12); /* Material divider */
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-footer-material #add-server-btn-material {
+  flex-grow: 1; /* Allow add button to fill space */
+}

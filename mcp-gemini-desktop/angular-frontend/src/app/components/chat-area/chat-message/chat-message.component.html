@@ -1,0 +1,27 @@
+<div class="message-wrapper-material" [ngClass]="message?.sender">
+    <mat-card [ngClass]="{
+    'user-message-card': message?.sender === 'user',
+    'ai-message-card': message?.sender === 'ai',
+    'system-message-card': isSystemMessage()
+  }">
+        <!-- System Message / Tool Status -->
+        <mat-card-content *ngIf="isSystemMessage()">
+            <details class="message-details-material" [open]="isDetailsOpen()">
+                <summary class="message-summary-material" [style.color]="getSummaryColor()">
+                    <mat-icon>{{ getSummaryIconName() }}</mat-icon>
+                    {{ getSummaryText() }}
+                </summary>
+                <div class="message-details-content-material"
+                    [style.overflow-wrap]="isToolStatusMessage() ? 'break-word' : 'normal'">
+                    {{ getDetailsContent() }}
+                </div>
+            </details>
+        </mat-card-content>
+
+        <!-- AI or User Message -->
+        <mat-card-content *ngIf="!isSystemMessage()" class="message-content-material"
+            [innerHTML]="getFormattedContent()">
+            <!-- Content will be rendered here by [innerHTML] -->
+        </mat-card-content>
+    </mat-card>
+</div>

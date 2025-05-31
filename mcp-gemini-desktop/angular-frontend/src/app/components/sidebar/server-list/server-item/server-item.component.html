@@ -1,0 +1,32 @@
+<div mat-list-item role="listitem" class="server-item-material" [attr.data-identifier]="server?.identifier">
+    <div class="server-item-content">
+        <div matListItemTitle class="server-info-material">
+            <span class="server-name-material" [title]="server?.identifier">{{ server?.display_name }}</span>
+            <mat-chip-set>
+                <mat-chip [ngClass]="server?.status" selected>{{ server?.status }}</mat-chip>
+            </mat-chip-set>
+            <button mat-icon-button color="warn" (click)="deleteServer()" class="delete-server-btn-material"
+                title="Remove Server">
+                <mat-icon>delete</mat-icon>
+            </button>
+        </div>
+
+        <mat-expansion-panel class="tools-expansion-panel" *ngIf="server && server.tools && server.tools.length > 0">
+            <mat-expansion-panel-header>
+                <mat-panel-title>
+                    Tools ({{ server.tools.length }})
+                </mat-panel-title>
+            </mat-expansion-panel-header>
+            <div class="tools-list-content">
+                <mat-chip-set>
+                    <mat-chip *ngFor="let tool of server.tools">{{ tool }}</mat-chip>
+                </mat-chip-set>
+            </div>
+        </mat-expansion-panel>
+        <div *ngIf="!server || !server.tools || server.tools.length === 0" class="no-tools-info">
+            <!-- Optional: message if no tools -->
+            <!-- <span class="tools-title-material">No tools available</span> -->
+        </div>
+    </div>
+    <mat-divider></mat-divider>
+</div>

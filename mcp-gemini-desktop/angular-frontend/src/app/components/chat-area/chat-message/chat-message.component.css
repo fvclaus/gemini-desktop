@@ -1,0 +1,72 @@
+/* Styles for ChatMessageComponent */
+:host {
+  display: block; /* Ensure the host takes up space for alignment */
+}
+
+.message-wrapper-material {
+  display: flex;
+  max-width: 80%;
+  width: fit-content;
+  margin-bottom: 4px; /* Add a small margin between messages if not handled by gap in parent */
+}
+
+.message-wrapper-material.user {
+  align-self: flex-end;
+  margin-left: auto; /* Push to the right */
+}
+
+.message-wrapper-material.ai,
+.message-wrapper-material.system,
+.message-wrapper-material.ai-loading {
+  align-self: flex-start;
+  margin-right: auto; /* Push to the left */
+}
+
+/* Card styling should primarily come from Material theme.
+   Add specific overrides for background if theme doesn't provide desired differentiation. */
+/*
+.user-message-card.mat-mdc-card {
+  background-color: var(--user-message-bg, #007bff) !important;
+  color: var(--user-message-text, white) !important;
+}
+.ai-message-card.mat-mdc-card {
+  background-color: var(--ai-message-bg, #f0f0f0) !important;
+  color: var(--ai-message-text, black) !important;
+}
+.system-message-card.mat-mdc-card {
+  background-color: var(--system-message-bg, #e9ecef) !important;
+  border: 1px solid var(--system-message-border, #ced4da) !important;
+}
+*/
+
+.message-wrapper-material.ai-loading .mat-mdc-card-content {
+  font-style: italic;
+  /* color: rgba(0,0,0,0.54); /* Let Material theme handle text color */
+}
+
+.message-summary-material {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  /* font-weight, color, font-size should come from Material Typography for summary */
+}
+
+.message-summary-material .mat-icon {
+  vertical-align: middle;
+  margin-right: 4px;
+  font-size: 18px; /* Consistent icon size */
+  width: 18px;
+  height: 18px;
+}
+
+.message-details-content-material {
+  padding-top: 8px; /* Space between summary and details */
+  /* font-size, color should come from Material Typography */
+}
+
+/* Ensure content within cards uses the global markdown/katex styles */
+:host ::ng-deep .message-content-material pre, /* Use ::ng-deep if global styles aren't piercing shadow DOM */
+:host ::ng-deep .message-details-content-material pre {
+    /* Styles for pre are in global styles.css */
+}
+/* Add similar ::ng-deep for other markdown elements if they don't pick up global styles */

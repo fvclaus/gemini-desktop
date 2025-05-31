@@ -1,0 +1,17 @@
+<div class="chat-area-material-wrapper"> <!-- Wrapper for overall chat area -->
+    <mat-toolbar class="chat-header-material">
+        <div class="chat-header-content">
+            <h1>GemCP Chat</h1>
+            <p class="subtitle">
+                Supercharge your Gemini with your own MCP servers
+            </p>
+        </div>
+    </mat-toolbar>
+
+    <div id="chat-messages-material" class="chat-messages-container">
+        <!-- Messages will appear here, eventually using *ngFor with app-chat-message -->
+        <app-chat-message *ngFor="let message of messages" [message]="message"></app-chat-message>
+    </div>
+
+    <app-chat-input (messageSent)="handleMessageSent($event)"></app-chat-input>
+</div>

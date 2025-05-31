@@ -2,11 +2,15 @@
   "name": "mcp-gemini-desktop",
   "version": "0.1.0",
   "description": "Desktop chat app for Gemini with MCP integration",
+  "type": "module",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "watch": "electron . --inspect",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "ng:serve": "cd angular-frontend && ng serve",
+    "electron:dev": "NODE_ENV=development electron .",
+    "dev": "concurrently \"npm:ng:serve\" \"npm:electron:dev\""
   },
   "keywords": [
     "Electron",
@@ -57,6 +61,7 @@
     ]
   },
   "dependencies": {
+    "electron-store": "^10.0.1",
     "katex": "^0.16.11",
     "marked": "^13.0.2",
     "node-fetch": "^2.7.0"

@@ -1,0 +1,138 @@
+/* styles.css - Global styles: base, Electron, core layout, Markdown/KaTeX */
+:root {
+  --title-bar-height: 38px;
+  --sidebar-width: 280px;
+
+  /* Semantic status colors for chips - can be overridden by component styles if needed */
+  --status-connected: #4CAF50;
+  --status-error: #F44336;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif; /* Angular Material default */
+  display: flex;
+  flex-direction: column;
+  /* Background handled by Material theme */
+}
+
+.title-bar {
+  height: var(--title-bar-height);
+  -webkit-app-region: drag;
+  background-color: white; /* Simple fallback for the non-Material div */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  border-bottom: 1px solid rgba(0,0,0,0.12); /* Material divider */
+}
+
+.container.mat-drawer-container {
+  flex-grow: 1;
+  height: calc(100% - var(--title-bar-height));
+  margin-top: var(--title-bar-height);
+}
+
+.sidebar-container.mat-drawer {
+  width: var(--sidebar-width);
+  /* Material theme handles its background/border */
+}
+
+.chat-area-container.mat-drawer-content {
+  display: flex; /* Allows app-chat-area to grow */
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+/* Ensure app-chat-area (the component host) itself grows */
+app-chat-area {
+  flex-grow: 1;
+  display: flex; /* Allows its inner .chat-area-material-wrapper to use height: 100% */
+  overflow: hidden; /* Prevent app-chat-area from causing scrollbars */
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
+
+/* Markdown, Code, KaTeX Styles - these apply to dynamically rendered content */
+.message-content-material pre,
+.message-details-content-material pre {
+  background-color: rgba(0,0,0,0.04);
+  padding: 10px 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: 0.875em;
+  margin: 8px 0;
+  border: 1px solid rgba(0,0,0,0.08);
+  white-space: pre;
+}
+
+.message-content-material code:not(pre > code),
+.message-details-content-material code:not(pre > code) {
+  background-color: rgba(0,0,0,0.04);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: 0.85em;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+.message-content-material blockquote,
+.message-details-content-material blockquote {
+  border-left: 3px solid rgba(0,0,0,0.12);
+  padding-left: 10px;
+  margin: 8px 0 8px 4px;
+  font-style: italic;
+}
+
+.message-content-material ul,
+.message-content-material ol,
+.message-details-content-material ul,
+.message-details-content-material ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.message-content-material strong,
+.message-content-material b,
+.message-details-content-material strong,
+.message-details-content-material b {
+  font-weight: 500; /* Material medium weight */
+}
+
+.message-content-material h1, .message-details-content-material h1,
+.message-content-material h2, .message-details-content-material h2,
+.message-content-material h3, .message-details-content-material h3,
+.message-content-material h4, .message-details-content-material h4,
+.message-content-material h5, .message-details-content-material h5,
+.message-content-material h6, .message-details-content-material h6 {
+  margin-top: 0.8em;
+  margin-bottom: 0.4em;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.message-content-material h1, .message-details-content-material h1 { font-size: 1.25rem; }
+.message-content-material h2, .message-details-content-material h2 { font-size: 1.125rem; }
+.message-content-material h3, .message-details-content-material h3 { font-size: 1rem; }
+
+.message-content-material .katex-display,
+.message-details-content-material .katex-display {
+  margin: 0.5em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
+}

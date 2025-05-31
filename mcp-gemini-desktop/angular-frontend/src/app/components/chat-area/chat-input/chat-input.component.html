@@ -1,0 +1,14 @@
+<div class="input-area-material">
+    <mat-form-field appearance="outline" class="message-input-field">
+        <mat-label>Type your message...</mat-label>
+        <textarea matInput cdkTextareaAutosize #autosize="cdkTextareaAutosize" cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="5" id="message-input-material" placeholder="Type your message here..."
+            [(ngModel)]="messageText" (keydown.enter)="sendMessageOnEnter($event)"
+            (input)="adjustTextareaHeight($event)">
+    </textarea>
+    </mat-form-field>
+    <button mat-icon-button color="primary" id="send-btn-material" (click)="sendMessage()"
+        [disabled]="!messageText.trim()">
+        <mat-icon>send</mat-icon>
+    </button>
+</div>

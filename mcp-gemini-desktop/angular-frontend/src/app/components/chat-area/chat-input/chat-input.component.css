@@ -1,0 +1,26 @@
+/* Styles for ChatInputComponent */
+:host {
+  display: block; /* Ensure the host takes up space */
+  flex-shrink: 0; /* Prevent input area from shrinking */
+}
+
+.input-area-material {
+  display: flex;
+  align-items: center; /* Align textarea and button */
+  padding: 8px 16px; /* Adjust padding as needed */
+  gap: 8px;
+  /* border-top: 1px solid rgba(0,0,0,0.12); /* Material divider, if not part of a toolbar */
+  /* background-color: #fafafa; /* Or let theme decide */
+}
+
+.message-input-field.mat-mdc-form-field {
+  flex-grow: 1;
+  /* The .mat-mdc-text-field-wrapper background is handled by the theme or global styles. */
+}
+
+/* Optional: If you need to specifically style the textarea within the form field */
+/*
+.message-input-field textarea.mat-mdc-input-element {
+  min-height: 40px; // Example
+}
+*/

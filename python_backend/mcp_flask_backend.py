@@ -4,10 +4,11 @@ import sys
 import os
 import argparse
 from flask import Flask, request, jsonify
+from flask_cors import CORS # Added import for CORS
 import asyncio
 import threading
 import logging
-from mcp_filesystem_server import TOOL_HANDLERS, TOOLS_SCHEMA
+from mcp_filesystem_server import create_filesystem_tools
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 logging.basicConfig(level=logging.INFO,
@@ -15,6 +16,9 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 flask_app = Flask(__name__)
+# Enable CORS for requests from http://localhost:4200
+CORS(flask_app, resources={r"/*": {"origins": "http://localhost:4200"}})
+
 chat_app = None
 loop = None
 loop_ready = threading.Event()
@@ -33,15 +37,8 @@ async def initialize_chat_app():
     global chat_app
     if chat_app is None:
         chat_app = MCPChatApp()
-        # Register filesystem tools directly
-        try:
-            chat_app.register_local_server_tools("filesystem", TOOLS_SCHEMA, TOOL_HANDLERS)
-            logger.info("Filesystem MCP server tools registered.")
-        except Exception as e:
-             logger.error(f"Failed to register filesystem tools: {e}", exc_info=True)
-             # Decide if this should be a fatal error or just log and continue
-             pass # Log and continue for now
-
+        # Filesystem tools will be registered dynamically when a workspace is set.
+        logger.info("MCPChatApp instance created. Filesystem tools will be registered upon workspace selection.")
 
         try:
             await chat_app.initialize_gemini()
@@ -54,7 +51,9 @@ async def initialize_chat_app():
     return chat_app
 
 
-async def add_server_async(path=None, name=None, command=None, args=None):
+from typing import Any, Dict, List, Optional, Tuple # Add typing imports
+
+async def add_server_async(path: Optional[str] = None, name: Optional[str] = None, command: Optional[str] = None, args: Optional[List[str]] = None) -> Tuple[Dict[str, Any], int]:
     app = await initialize_chat_app()
     if not app:
         return {"status": "error", "message": "Chat app not initialized"}, 500
@@ -76,7 +75,7 @@ async def add_server_async(path=None, name=None, command=None, args=None):
         return {"status": "error", "message": f"Failed to add server: {e}"}, 500
 
 
-async def disconnect_server_async(identifier):
+async def disconnect_server_async(identifier: str) -> Tuple[Dict[str, str], int]:
     app = await initialize_chat_app()
     if not app:
         return {"status": "error", "message": "Chat app not initialized"}, 500
@@ -92,11 +91,11 @@ async def disconnect_server_async(identifier):
         return {"status": "error", "message": f"Failed to disconnect server: {e}"}, 500
 
 
-async def get_servers_async():
+async def get_servers_async() -> Tuple[Dict[str, Any], int]:
     app = await initialize_chat_app()
     if not app:
         return {"status": "error", "message": "Chat app not initialized"}, 500
-    servers = []
+    servers: List[Dict[str, Any]] = [] # Explicitly type servers
     # Now iterating through identifiers (path or name)
     for identifier, resources in app.server_resources.items():
         server_display_name = os.path.basename(identifier) if '/' in identifier or '\\' in identifier else identifier
@@ -109,7 +108,7 @@ async def get_servers_async():
     return {"status": "success", "servers": servers}, 200
 
 
-async def process_chat_async(message):
+async def process_chat_async(message: str) -> Tuple[Dict[str, str], int]:
     app = await initialize_chat_app()
     if not app:
         return {"reply": "Error: Backend chat app not initialized."}, 500
@@ -121,7 +120,7 @@ async def process_chat_async(message):
         return {"reply": f"An error occurred: {e}"}, 500
 
 
-async def set_api_key_async(api_key):
+async def set_api_key_async(api_key: str) -> Tuple[Dict[str, str], int]:
     app = await initialize_chat_app()
     if not app:
         return {"status": "error", "message": "Chat app not initialized"}, 500
@@ -134,7 +133,7 @@ async def set_api_key_async(api_key):
         return {"status": "error", "message": f"Failed to set API key: {e}"}, 500
 
 # --- Model Switching Async Functions ---
-async def set_model_async(model_name):
+async def set_model_async(model_name: str) -> Tuple[Dict[str, str], int]:
     app = await initialize_chat_app()
     if not app:
         return {"status": "error", "message": "Chat app not initialized"}, 500
@@ -147,7 +146,7 @@ async def set_model_async(model_name):
         logger.error(f"Error setting Gemini model to {model_name}: {e}", exc_info=True)
         return {"status": "error", "message": f"Failed to set model: {e}"}, 500
 
-async def get_model_async():
+async def get_model_async() -> Tuple[Dict[str, Any], int]:
     app = await initialize_chat_app()
     if not app:
         return {"status": "error", "message": "Chat app not initialized"}, 500
@@ -158,7 +157,7 @@ async def get_model_async():
         logger.error(f"Error getting current Gemini model: {e}", exc_info=True)
         return {"status": "error", "message": f"Failed to get model: {e}"}, 500
 
-async def list_models_async():
+async def list_models_async() -> Tuple[Dict[str, Any], int]:
     app = await initialize_chat_app()
     if not app:
         # Return empty list even if app not fully initialized, as the list is static for now
@@ -173,6 +172,46 @@ async def list_models_async():
         logger.error(f"Error listing available Gemini models: {e}", exc_info=True)
         return {"status": "error", "message": f"Failed to list models: {e}"}, 500
 # --- End Model Switching Async Functions ---
+
+# --- Workspace Management Async Function ---
+async def set_workspace_async(workspace_path: str) -> Tuple[Dict[str, Any], int]:
+    global chat_app
+    app = await initialize_chat_app() # Ensures chat_app is initialized
+    if not app:
+        return {"status": "error", "message": "Chat app not initialized"}, 500
+
+    try:
+        # If filesystem tools were previously registered, disconnect them first
+        if "filesystem" in app.server_resources:
+            logger.info("Disconnecting previously registered filesystem tools.")
+            await app.disconnect_mcp_server("filesystem")
+
+        logger.info(f"Attempting to create and register filesystem tools for workspace: {workspace_path}")
+        # The third returned item (static_schema_for_cap) is no longer stored or used here.
+        dynamic_schema, dynamic_handlers, _ = create_filesystem_tools(workspace_path)
+        
+        app.register_local_server_tools(
+            identifier="filesystem", # Corrected parameter name
+            tools_schema=dynamic_schema, # Use the dynamically generated schema
+            tool_handlers=dynamic_handlers
+        )
+        logger.info(f"Filesystem tools successfully registered for workspace: {workspace_path}")
+        # Return the names of the registered tools for confirmation/display on frontend
+        return {"status": "success", "message": f"Workspace set to '{workspace_path}'. Filesystem tools registered.", "tools": list(dynamic_handlers.keys())}, 200
+    except ValueError as ve: # Catch errors from create_filesystem_tools (e.g., invalid path)
+        logger.error(f"ValueError setting workspace to {workspace_path}: {ve}", exc_info=True)
+        return {"status": "error", "message": str(ve)}, 400
+    except Exception as e:
+        logger.error(f"Error setting workspace to {workspace_path}: {e}", exc_info=True)
+        # Attempt to disconnect filesystem tools if registration failed midway
+        if "filesystem" in app.server_resources: # Check if it was partially registered
+            try:
+                await app.disconnect_mcp_server("filesystem")
+                logger.info("Cleaned up filesystem tools after registration error.")
+            except Exception as cleanup_e:
+                logger.error(f"Error during cleanup of filesystem tools: {cleanup_e}", exc_info=True)
+        return {"status": "error", "message": f"Failed to set workspace and register filesystem tools: {e}"}, 500
+# --- End Workspace Management ---
 
 @flask_app.route('/chat', methods=['POST'])
 def chat():
@@ -214,7 +253,13 @@ def add_server():
         identifier_log = path
     elif name and command and isinstance(args, list):
         # Adding via command/args (e.g., from JSON)
-        future = asyncio.run_coroutine_threadsafe(add_server_async(name=name, command=command, args=args), loop)
+        # Ensure args are strings for the type hint of add_server_async
+        processed_args: List[str] = []
+        for arg_item in args:
+            if arg_item is not None: # Ensure item is not None before converting
+                processed_args.append(str(arg_item))
+            # else: we could choose to log a warning or skip None arguments
+        future = asyncio.run_coroutine_threadsafe(add_server_async(name=name, command=command, args=processed_args), loop)
         identifier_log = name
     else:
         return jsonify({"status": "error", "message": "Invalid parameters. Provide either 'path' or 'name', 'command', and 'args'."}), 400
@@ -360,6 +405,29 @@ def list_models():
             logger.error(f"Error listing models directly (no loop): {e}", exc_info=True)
             return jsonify({"status": "error", "message": f"Error listing models: {e}"}), 500
 # --- End Model Switching Endpoints ---
+
+# --- Workspace Endpoint ---
+@flask_app.route('/set-workspace', methods=['POST'])
+def set_workspace():
+    data = request.get_json()
+    workspace_path = data.get('workspace_path')
+
+    if not workspace_path:
+        return jsonify({"status": "error", "message": "No workspace_path provided."}), 400
+    if not loop or not loop.is_running():
+        return jsonify({"status": "error", "message": "Backend loop not running."}), 500
+
+    future = asyncio.run_coroutine_threadsafe(set_workspace_async(workspace_path), loop)
+    try:
+        result, status_code = future.result(timeout=30) # Timeout for tool registration
+        return jsonify(result), status_code
+    except asyncio.TimeoutError:
+        logger.error(f"Setting workspace to {workspace_path} timed out.")
+        return jsonify({"status": "error", "message": "Error: Setting workspace timed out."}), 504
+    except Exception as e:
+        logger.error(f"Error getting result from set_workspace future: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": f"Error setting workspace: {e}"}), 500
+# --- End Workspace Endpoint ---
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MCP Gemini Flask Backend')

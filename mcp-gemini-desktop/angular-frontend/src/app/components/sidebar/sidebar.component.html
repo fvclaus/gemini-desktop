@@ -1,0 +1,27 @@
+<div class="sidebar-content-wrapper">
+
+    <mat-toolbar class="sidebar-toolbar">
+        <span>Workspace</span>
+    </mat-toolbar>
+    <div class="sidebar-section">
+        <app-workspace></app-workspace>
+    </div>
+
+    <mat-toolbar class="sidebar-toolbar">
+        <span>MCP Servers</span>
+    </mat-toolbar>
+
+    <div class="sidebar-section">
+        <app-server-list></app-server-list>
+    </div>
+
+    <div class="sidebar-footer-material"> <!-- Changed class -->
+        <button mat-flat-button color="primary" id="add-server-btn-material" (click)="addServer()">
+            <mat-icon>add</mat-icon>
+            Add Server
+        </button>
+        <button mat-icon-button id="settings-btn-material" title="Settings" (click)="openSettings()">
+            <mat-icon>settings</mat-icon>
+        </button>
+    </div>
+</div>

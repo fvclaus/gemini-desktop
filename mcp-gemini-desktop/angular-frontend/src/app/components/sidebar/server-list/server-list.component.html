@@ -1,0 +1,18 @@
+<div class="server-list-wrapper">
+    <div *ngIf="isLoading" class="server-list-message">
+        Loading servers...
+        <!-- Optionally, add a mat-spinner here -->
+    </div>
+
+
+    <mat-list role="list" id="server-list-material" *ngIf="!isLoading">
+        <ng-container *ngIf="servers && servers.length > 0; else noServers">
+            <app-server-item *ngFor="let server of servers" [server]="server"></app-server-item>
+        </ng-container>
+        <ng-template #noServers>
+            <mat-list-item role="listitem" class="no-servers-item">
+                No MCP servers found for this workspace.
+            </mat-list-item>
+        </ng-template>
+    </mat-list>
+</div>

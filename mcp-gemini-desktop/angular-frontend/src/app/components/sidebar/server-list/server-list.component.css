@@ -1,0 +1,13 @@
+/* Styles for ServerListComponent */
+.no-servers-item.mat-mdc-list-item {
+  font-style: italic;
+  /* color: rgba(0,0,0,0.54); /* Let Material theme handle text color */
+  justify-content: center !important; /* Ensure text is centered */
+}
+
+/* Ensure the list itself doesn't have extra padding if not desired */
+/*
+:host .mat-mdc-list-base {
+  padding-top: 0;
+}
+*/

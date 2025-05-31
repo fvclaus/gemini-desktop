@@ -1,0 +1,12 @@
+<div class="title-bar"></div>
+
+<app-workspace *ngIf="!showMainContent"></app-workspace>
+
+<mat-sidenav-container *ngIf="showMainContent" class="container">
+  <mat-sidenav mode="side" opened class="sidebar-container">
+    <app-sidebar></app-sidebar>
+  </mat-sidenav>
+  <mat-sidenav-content class="chat-area-container">
+    <app-chat-area></app-chat-area>
+  </mat-sidenav-content>
+</mat-sidenav-container>
