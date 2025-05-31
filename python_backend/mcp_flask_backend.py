@@ -7,7 +7,7 @@ from flask import Flask, request, jsonify
 import asyncio
 import threading
 import logging
-
+from mcp_filesystem_server import TOOL_HANDLERS, TOOLS_SCHEMA
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 logging.basicConfig(level=logging.INFO,
@@ -33,6 +33,16 @@ async def initialize_chat_app():
     global chat_app
     if chat_app is None:
         chat_app = MCPChatApp()
+        # Register filesystem tools directly
+        try:
+            chat_app.register_local_server_tools("filesystem", TOOLS_SCHEMA, TOOL_HANDLERS)
+            logger.info("Filesystem MCP server tools registered.")
+        except Exception as e:
+             logger.error(f"Failed to register filesystem tools: {e}", exc_info=True)
+             # Decide if this should be a fatal error or just log and continue
+             pass # Log and continue for now
+
+
         try:
             await chat_app.initialize_gemini()
             logger.info("MCPChatApp initialized successfully.")
