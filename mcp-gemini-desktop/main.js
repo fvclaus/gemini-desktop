@@ -165,6 +165,8 @@ ipcMain.handle("get-python-port", async () => {
   return pythonPort;
 });
 
+
+
 ipcMain.handle("get-initial-workspace", async () => {
   console.log("[get-initial-workspace] Renderer requested initial workspace path.");
   const currentWorkspace = store.get("lastOpenedWorkspace");
@@ -207,16 +209,16 @@ ipcMain.handle("change-workspace-and-reload", async () => {
   // Let's make it orchestrate:
 
   const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ["openDirectory"],
+    selectionType: "directory",
     title: "Select New Workspace Folder",
   });
 
-  if (result.canceled || result.filePaths.length === 0) {
-    console.log("[change-workspace-and-reload] User cancelled workspace selection.");
-    return store.get("lastOpenedWorkspace"); // Return current one if cancelled
+  if (result.canceled) {
+    console.log("[change-workspace-and-reload] User canceled workspace selection.");
+    return store.get("lastOpenedWorkspace");
   }
 
-  const newWorkspacePath = result.filePaths[0];
+  const newWorkspacePath = result.filePath;
   const oldWorkspacePath = store.get("lastOpenedWorkspace");
 
   if (newWorkspacePath !== oldWorkspacePath) {
@@ -321,6 +323,58 @@ ipcMain.handle("set-model", async (event, modelName) => {
 });
 
 // --- End Model Switching IPC Handlers ---
+
+ipcMain.handle("show-open-dialog", async (event, options) => {
+  if (!mainWindow) {
+    throw new Error("Main window is not available to show dialog.");
+  }
+  if (!options || typeof options !== 'object') {
+    throw new Error("Invalid options provided for dialog.");
+  }
+
+  const { title, filters, selectionType = 'file' } = options; // Default to 'file'
+
+  if (typeof title !== 'string' || !title) {
+    throw new Error("A valid title must be provided for the dialog.");
+  }
+
+  if (selectionType !== 'file' && selectionType !== 'directory') {
+    throw new Error("Invalid selectionType. Must be 'file' or 'directory'.");
+  }
+
+  const dialogProperties = [];
+  if (selectionType === 'file') {
+    dialogProperties.push('openFile');
+  } else { // 'directory'
+    dialogProperties.push('openDirectory');
+  }
+
+  const dialogOptions = {
+    title: title,
+    properties: dialogProperties,
+  };
+
+  if (selectionType === 'file') {
+    if (!Array.isArray(filters) || filters.some(f => typeof f.name !== 'string' || !Array.isArray(f.extensions))) {
+      throw new Error("Valid filters (name and extensions array) must be provided for file selection.");
+    }
+    dialogOptions.filters = filters;
+  }
+
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, dialogOptions);
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { canceled: true, path: null };
+    } else {
+      const selectedPath = result.filePaths[0];
+      return { canceled: false, path: selectedPath };
+    }
+  } catch (error) {
+    throw new Error(`Failed to show open file dialog: ${error.message}`);
+  }
+});
+
 
 ipcMain.on("save-api-key", async (event, apiKey) => {
   console.log("[save-api-key] Received API key from settings dialog.");

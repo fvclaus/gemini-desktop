@@ -474,8 +474,9 @@ export class ChatService {
       this.addMessageHelper({ text: 'Cannot add server: Backend not connected.', sender: 'system', type: 'error', timestamp: new Date() });
       return;
     }
-    const dialogOptions = {
-      properties: ['openFile'],
+    const dialogOptions: ShowOpenFileDialog = {
+      title: 'Pick a MCP servers file',
+      selectionType: 'file',
       filters: [
         { name: 'MCP Server Files', extensions: ['py', 'json'] },
         { name: 'Python Scripts', extensions: ['py'] },
@@ -484,9 +485,9 @@ export class ChatService {
       ]
     };
     try {
-      const filePaths = await window.electronAPI.showOpenDialog(dialogOptions);
-      if (filePaths && filePaths.length > 0) {
-        const filePath = filePaths[0];
+      const showOpenDialogResponse = await window.electronAPI.showOpenDialog(dialogOptions);
+      if (!showOpenDialogResponse.canceled) {
+        const filePath = showOpenDialogResponse.path;
         if (filePath.endsWith('.py')) {
           await this.addServerByPath(filePath);
         } else if (filePath.endsWith('.json')) {

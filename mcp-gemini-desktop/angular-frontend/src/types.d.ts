@@ -1,4 +1,30 @@
 declare global {
+
+  type ShowOpenDialogCanceledResponse = {
+    canceled: true;
+  };
+
+  type ShowOpenDialogResponse = {
+    canceled: false;
+    path: string;
+  }
+
+  type ShowOpenDialogFilter = {
+    name: string;
+    extensions: string[]
+  }
+
+  type ShowOpenDirectoryDialog = {
+    title: string;
+    selectionType: 'directory',
+  }
+
+  type ShowOpenFileDialog = {
+    title: string;
+    selectionType: 'file',
+    filters:  ShowOpenDialogFilter[];
+  }
+
   interface Window {
     electronAPI: {
       getInitialWorkspace: () => Promise<string | null>;
@@ -6,7 +32,7 @@ declare global {
       getSelectedWorkspace: () => Promise<string | null>;
       changeWorkspaceAndReload: () => Promise<string | null>;
       getPythonPort: () => Promise<number>;
-      showOpenDialog: (options: any) => Promise<string[] | undefined>;
+      showOpenDialog: (options: ShowOpenFileDialog | ShowOpenDirectoryDialog) => Promise<ShowOpenDialogCanceledResponse | ShowOpenDialogResponse>;
       readFileContent: (filePath: string) => Promise<string>;
       openSettingsDialog: () => void;
       onApiKeyUpdate: (callback: (result: { success: boolean; message?: string }) => void) => void;

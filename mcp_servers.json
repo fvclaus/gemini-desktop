@@ -1,12 +1,8 @@
 {
   "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/home/fredo/gemini"
-      ]
+    "anki": {
+      "command": "node",
+      "args": [ "/home/fredo/workspace/anki-mcp-server/dist/index.js" ]
     }
   }
 }

@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getPythonPort: () => ipcRenderer.invoke("get-python-port"),
   openSettingsDialog: () => ipcRenderer.invoke("open-settings-dialog"),
   readFileContent: (filePath) => ipcRenderer.invoke("read-file-content", filePath),
+  showOpenDialog: (options) => ipcRenderer.invoke("show-open-dialog", options),
 
   changeWorkspaceAndReload: () => ipcRenderer.invoke("change-workspace-and-reload"),
   
