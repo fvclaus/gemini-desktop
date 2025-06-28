@@ -108,16 +108,16 @@ async def get_servers_async() -> Tuple[Dict[str, Any], int]:
     return {"status": "success", "servers": servers}, 200
 
 
-async def process_chat_async(message: str) -> Tuple[Dict[str, str], int]:
+async def process_chat_async(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
     app = await initialize_chat_app()
     if not app:
-        return {"reply": "Error: Backend chat app not initialized."}, 500
+        return {"messages": [{"type": "error", "content": "Error: Backend chat app not initialized."}]}, 500
     try:
-        reply = await app.process_query(message)
-        return {"reply": reply}, 200
+        messages = await app.process_chat_message(payload)
+        return {"messages": messages}, 200
     except Exception as e:
         logger.error(f"Error processing chat: {e}", exc_info=True)
-        return {"reply": f"An error occurred: {e}"}, 500
+        return {"messages": [{"type": "error", "content": f"An error occurred: {e}"}]}, 500
 
 
 async def set_api_key_async(api_key: str) -> Tuple[Dict[str, str], int]:
@@ -216,24 +216,23 @@ async def set_workspace_async(workspace_path: str) -> Tuple[Dict[str, Any], int]
 @flask_app.route('/chat', methods=['POST'])
 def chat():
     data = request.get_json()
-    message = data.get('message')
-    if not message:
-        return jsonify({"reply": "No message provided."}), 400
+    if not data:
+        return jsonify({"messages": [{"type": "error", "content": "No JSON payload provided."}]}), 400
     if not loop or not loop.is_running():
-        return jsonify({"reply": "Backend loop not running."}), 500
+        return jsonify({"messages": [{"type": "error", "content": "Backend loop not running."}]}), 500
 
     future = asyncio.run_coroutine_threadsafe(
-        process_chat_async(message), loop)
+        process_chat_async(data), loop)
     try:
         result, status_code = future.result(timeout=60)
         return jsonify(result), status_code
     except asyncio.TimeoutError:
         logger.error("Chat processing timed out.")
-        return jsonify({"reply": "Error: Response timed out."}), 504
+        return jsonify({"messages": [{"type": "error", "content": "Error: Response timed out."}]}), 504
     except Exception as e:
         logger.error(
             f"Error getting result from chat future: {e}", exc_info=True)
-        return jsonify({"reply": f"Error processing your request: {e}"}), 500
+        return jsonify({"messages": [{"type": "error", "content": f"Error processing your request: {e}"}]}), 500
 
 
 @flask_app.route('/servers', methods=['POST'])

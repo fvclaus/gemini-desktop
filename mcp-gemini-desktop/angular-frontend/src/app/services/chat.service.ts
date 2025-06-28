@@ -12,10 +12,11 @@ export interface Message {
   id?: string;
   text: string;
   sender: 'user' | 'ai' | 'system';
-  type?: 'welcome' | 'loading' | 'error' | 'tool_call_start' | 'tool_call_end' | 'tool_announcement' | 'log';
-  details?: string;
+  type?: 'welcome' | 'loading' | 'error' | 'tool_request' | 'tool_result' | 'log' | 'text';
+  details?: any; // Can be string or object for tool calls
   htmlContent?: string;
   timestamp: Date;
+  tool_calls?: any[]; // For tool_request type
 }
 
 export interface Server { // Ensure Server interface is also exported if used elsewhere
@@ -81,26 +82,8 @@ export class ChatService {
   }
 
   private setupElectronListeners(): void {
-    window.electronAPI.onApiKeyUpdate((result) => {
-      this.ngZone.run(() => { // Run inside Angular zone for change detection
-        if (result.success) {
-          this.addMessageHelper({
-            text: 'API Key set successfully. Backend re-initialized.',
-            sender: 'system',
-            timestamp: new Date()
-          });
-          // Potentially re-initialize or notify backend
-        } else {
-          this.addMessageHelper({
-            text: `Error setting API Key: ${result.message}`,
-            sender: 'system',
-            type: 'error',
-            details: result.message,
-            timestamp: new Date()
-          });
-        }
-      });
-    });
+    // The onApiKeyUpdate listener is no longer needed here,
+    // as the settings component will handle the response directly.
   }
 
   private addMessageHelper(message: Message, updateId?: string): void {
@@ -177,7 +160,7 @@ export class ChatService {
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
-      text: messageText,
+      text: messageText, // Keep original text for user's view
       sender: 'user',
       timestamp: new Date()
     };
@@ -196,16 +179,16 @@ export class ChatService {
       const response = await fetch(`http://127.0.0.1:${this.pythonPort}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageText }),
+        body: JSON.stringify({ type: 'user_message', text: messageText }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ reply: `HTTP error! status: ${response.status}` }));
-        throw new Error(errorData.reply || `HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ messages: [{content: `HTTP error! status: ${response.status}`}] }));
+        throw new Error(errorData.messages[0]?.content || `HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      this.handleBackendResponse(loadingMessageId, data.reply);
+      this.handleBackendResponse(loadingMessageId, data.messages);
 
     } catch (error) {
       console.error('Error sending message:', error);
@@ -220,78 +203,118 @@ export class ChatService {
     }
   }
 
-  private handleBackendResponse(loadingMessageId: string, responseText: string): void {
-    const lines = responseText.split('\\n');
-    const statusMessages: string[] = [];
-    const finalReplyLines: string[] = [];
+  private handleBackendResponse(loadingMessageId: string, messages: any[]): void {
+   // Remove loading message first
+   this.ngZone.run(() => {
+     const currentMessages = this.messagesSubject.getValue();
+     const updatedMessages = currentMessages.filter(m => m.id !== loadingMessageId);
+     this.messagesSubject.next(updatedMessages);
+   });
 
-    lines.forEach(line => {
-      if (line.startsWith('TOOL_CALL_START:') || line.startsWith('TOOL_CALL_END:')) {
-        statusMessages.push(line);
-      } else if (line.trim().length > 0) {
-        finalReplyLines.push(line);
-      }
-    });
+   // Add new messages from the backend
+   messages.forEach(msg => {
+     let newMessage: Message;
+     switch (msg.type) {
+       case 'tool_request':
+         newMessage = {
+           sender: 'ai',
+           type: 'tool_request',
+           text: `The model wants to call the following tool(s):`,
+           tool_calls: msg.tool_calls,
+           timestamp: new Date(),
+         };
+         break;
+       case 'tool_result':
+          newMessage = {
+           sender: 'system',
+           type: 'tool_result',
+           text: `Tool ${msg.tool_name} finished with status: ${msg.status}`,
+           details: msg.content,
+           timestamp: new Date(),
+         };
+         break;
+       case 'text':
+         newMessage = {
+           sender: 'ai',
+           type: 'text',
+           text: msg.content,
+           htmlContent: this.processAiMessageContent(msg.content),
+           timestamp: new Date(),
+         };
+         break;
+       case 'error':
+          newMessage = {
+           sender: 'system',
+           type: 'error',
+           text: 'An error occurred.',
+           details: msg.content,
+           timestamp: new Date(),
+         };
+         break;
+       default:
+         console.warn("Unknown message type from backend:", msg.type);
+         return; // Skip unknown message types
+     }
+     this.addMessageHelper(newMessage);
+   });
+ }
 
-    // Display status messages first as separate system messages
-    statusMessages.forEach(statusMsg => {
-      let type: 'tool_call_start' | 'tool_call_end' = 'tool_call_start';
-      let details = '';
-      if (statusMsg.startsWith('TOOL_CALL_START:')) {
-        type = 'tool_call_start';
-        details = statusMsg.substring('TOOL_CALL_START:'.length).trim();
-      } else {
-        type = 'tool_call_end';
-        details = statusMsg.substring('TOOL_CALL_END:'.length).trim();
-      }
-      this.addMessageHelper({
-        text: details.split(' ')[0] || 'Tool Call', // Use tool name as text
-        sender: 'system',
-        type: type,
-        details: details,
-        timestamp: new Date()
-      });
-    });
+ async sendToolResponse(approved: boolean, toolCall: any): Promise<void> {
+   if (!this.pythonPort) {
+     this.addMessageHelper({ text: 'Cannot send tool response: Backend not connected.', sender: 'system', type: 'error', timestamp: new Date() });
+     return;
+   }
 
-    const finalReply = finalReplyLines.join('\\n').trim();
-    const currentMessages = this.messagesSubject.getValue();
-    const loadingMessageIndex = currentMessages.findIndex(m => m.id === loadingMessageId);
+   const payload = {
+     type: 'tool_response',
+     approved: approved,
+     tool_call: toolCall
+   };
 
-    if (loadingMessageIndex !== -1) {
-      if (finalReply) {
-        const aiMessage: Message = {
-          id: loadingMessageId, // Reuse ID to update
-          text: finalReply,
-          sender: 'ai',
-          htmlContent: this.processAiMessageContent(finalReply),
-          timestamp: new Date()
-        };
-        this.addMessageHelper(aiMessage, loadingMessageId);
-      } else if (statusMessages.length > 0) {
-        // If only status messages and no final reply, remove loading
-        this.ngZone.run(() => {
-          const updatedMessages = currentMessages.filter(m => m.id !== loadingMessageId);
-          this.messagesSubject.next(updatedMessages);
-        });
-      } else {
-        // Empty response
-        this.addMessageHelper({
-          text: '(Received empty response from AI)',
-          sender: 'system',
-          type: 'log',
-          timestamp: new Date()
-        }, loadingMessageId);
-      }
-    } else if (finalReply) {
-      // Loading message was somehow removed, add final reply as new
-      this.addMessageHelper({
-        text: finalReply,
-        sender: 'ai',
-        htmlContent: this.processAiMessageContent(finalReply),
-        timestamp: new Date()
-      });
-    }
-  }
+   // Optional: Add a system message to indicate user action
+   this.addMessageHelper({
+     text: `User ${approved ? 'approved' : 'denied'} tool call: ${toolCall.name}`,
+     sender: 'system',
+     type: 'log',
+     timestamp: new Date()
+   });
+
+   const loadingMessageId = `ai-loading-${Date.now()}`;
+   this.addMessageHelper({
+     id: loadingMessageId,
+     text: '...',
+     sender: 'ai',
+     type: 'loading',
+     timestamp: new Date()
+   });
+
+   try {
+     const response = await fetch(`http://127.0.0.1:${this.pythonPort}/chat`, {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify(payload),
+     });
+
+     if (!response.ok) {
+       const errorData = await response.json().catch(() => ({ messages: [{content: `HTTP error! status: ${response.status}`}] }));
+       throw new Error(errorData.messages[0]?.content || `HTTP error! status: ${response.status}`);
+     }
+
+     const data = await response.json();
+     this.handleBackendResponse(loadingMessageId, data.messages);
+
+   } catch (error) {
+     console.error('Error sending tool response:', error);
+     const errorMessage = error instanceof Error ? error.message : String(error);
+     this.addMessageHelper({
+       text: `Error: ${errorMessage}`,
+       sender: 'system',
+       type: 'error',
+       details: errorMessage,
+       timestamp: new Date()
+     }, loadingMessageId);
+   }
+ }
 
   async fetchServers(): Promise<void> {
     if (!this.pythonPort) return;
@@ -501,10 +524,6 @@ export class ChatService {
         console.error('Error opening file dialog or processing file:', dialogError);
         this.addMessageHelper({ text: `Error with file dialog: ${dialogError instanceof Error ? dialogError.message : String(dialogError)}`, sender: 'system', type: 'error', timestamp: new Date() });
     }
-  }
-
-  openSettings(): void {
-    window.electronAPI.openSettingsDialog();
   }
 
   ngOnDestroy() {

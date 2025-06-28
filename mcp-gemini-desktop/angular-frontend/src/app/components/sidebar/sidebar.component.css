@@ -45,3 +45,20 @@
 .sidebar-footer-material #add-server-btn-material {
   flex-grow: 1; /* Allow add button to fill space */
 }
+.tab-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px;
+  border-bottom: 1px solid rgba(0,0,0,0.12);
+}
+
+.tab-header .mat-icon-button {
+  color: rgba(0,0,0,0.54);
+}
+
+.tab-header .mat-icon-button.active {
+  color: #3f51b5; /* Or your primary color */
+}
+.done-button-container {
+  justify-content: flex-end;
+}

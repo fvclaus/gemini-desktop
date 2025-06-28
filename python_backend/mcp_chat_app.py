@@ -4,7 +4,7 @@ import sys
 import os
 from dotenv import load_dotenv
 from contextlib import AsyncExitStack
-from typing import List, Dict, Any, Optional, Tuple, Set
+from typing import List, Dict, Any, Optional, Tuple, Union
 import logging
 
 from google import genai
@@ -26,12 +26,12 @@ class MCPChatApp:
         self.gemini_sync_client: Optional[genai.Client] = None
         self.gemini_client: Optional[genai.client.AsyncClient] = None
         self.mcp_tools: List[Any] = []
-        self.tool_to_session: Dict[str, ClientSession] = {}
+        self.tool_to_session: Dict[str, Union[ClientSession, str]] = {}
         self.chat_history: List[genai_types.Content] = []
         self.server_resources: Dict[str, Dict[str, Any]] = {}
         # self.cached_gemini_declarations: Optional[List[genai_types.Tool]] = None
         self.tools: list[genai_types.Tool] = []
-        self.status_check_task: Optional[asyncio.Task] = None
+        self.status_check_task: Optional[asyncio.Task[None]] = None
         self.api_key: Optional[str] = None
         self.available_models: List[str] = [
             "gemini-2.5-pro-preview-05-06",
@@ -135,7 +135,7 @@ class MCPChatApp:
                     parameters=tool_schema.get("input_schema", {}),
                     description=tool_schema.get("description", "")
                 ))
-                self.tool_to_session[tool_name] = identifier # Map tool name to server identifier
+                self.tool_to_session[tool_name] = identifier  # Map tool name to server identifier
                 self.server_resources[identifier]['tools'].append(tool_name)
 
         self.tools.append(genai_types.Tool(function_declarations=function_declarations))
@@ -505,19 +505,31 @@ class MCPChatApp:
             error_msg = f"Error executing tool '{tool_name}': {e}"
             return error_msg, None
 
-    async def process_query(self, query: str) -> str:
-        logger.info(f"Processing query: '{query}'") # Add logging
+    async def process_chat_message(self, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+        message_type = payload.get("type")
+        logger.info(f"Processing chat message of type: {message_type}")
+
         if not self.gemini_client:
-            logger.error("process_query called but Gemini client not initialized.")
-            return "Error: Gemini client not initialized. Please set your API key via settings."
+            logger.error("process_chat_message called but Gemini client not initialized.")
+            return [{"type": "error", "content": "Error: Gemini client not initialized. Please set your API key via settings."}]
 
-        # Append user message
-        logger.debug("Appending user message to history.")
-        self.chat_history.append(genai_types.Content(
-            role="user", parts=[genai_types.Part(text=query)]))
+        if message_type == "user_message":
+            return await self._handle_user_message(payload)
+        elif message_type == "tool_response":
+            return await self._handle_tool_response(payload)
+        else:
+            logger.warning(f"Received unknown message type: {message_type}")
+            return [{"type": "error", "content": f"Unknown message type: {message_type}"}]
 
-        config = genai_types.GenerateContentConfig(
-            tools=self.tools)
+    async def _handle_user_message(self, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+        query = payload.get("text")
+        if not query:
+            return [{"type": "error", "content": "Missing 'text' in user_message payload."}]
+
+        logger.info(f"Processing user message: '{query}'")
+        self.chat_history.append(genai_types.Content(role="user", parts=[genai_types.Part(text=query)]))
+
+        config = genai_types.GenerateContentConfig(tools=self.tools)
 
         try:
             # Ensure the currently set model name is used
@@ -561,107 +573,127 @@ class MCPChatApp:
             ]
 
             if function_calls_to_execute:
-                logger.info(f"Gemini requested {len(function_calls_to_execute)} tool call(s).")
-                tool_response_parts = []
-                tool_status_messages = [] # Store status messages for prepending
-
-                for function_call in function_calls_to_execute:
-                    tool_name = function_call.name
-                    tool_args = dict(function_call.args)
-                    logger.info(f"Preparing tool call: {tool_name} with args: {tool_args}")
-                    # Add start message
-                    tool_status_messages.append(f"TOOL_CALL_START: {tool_name} args={tool_args}")
-
-                    # Execute tool and get both status and content
-                    tool_status_str, tool_content = await self.execute_mcp_tool(tool_name, tool_args)
-                    logger.info(f"Tool '{tool_name}' execution finished with status: {tool_status_str}")
-
-                    # Add end message using only the status string
-                    tool_status_messages.append(f"TOOL_CALL_END: {tool_name} status={tool_status_str}")
-
-                    # Prepare the result for Gemini. Use the actual content on success,
-                    # or the error status string on failure.
-                    gemini_tool_result_content = tool_content if tool_status_str == "Success" else tool_status_str
-
-                    tool_response_parts.append(genai_types.Part.from_function_response(
-                        name=tool_name,
-                        response={"result": gemini_tool_result_content}, # Send actual content or error string
-                    ))
-
-                if tool_response_parts:
-                    logger.debug("Appending tool responses to history.")
-                    self.chat_history.append(genai_types.Content(
-                        role="tool", parts=tool_response_parts))
-
-                    # Ensure the currently set model name is used after tool call
-                    logger.info(f"Sending tool results back to Gemini model: {self.gemini_model_name}")
-                    logger.debug(f"Request contents (with tool results): {self.chat_history}")
-                    response = await self.gemini_client.models.generate_content(
-                        model=self.gemini_model_name, # Uses the instance variable
-                        contents=self.chat_history,
-                        config=config,
-                    )
-
-                    logger.debug(f"Received Gemini response after tool call: {response}")
-                    if not response.candidates or not response.candidates[0].content:
-                        logger.warning("Gemini response missing candidates or content after tool call.")
-                        feedback = response.prompt_feedback if hasattr(
-                            response, 'prompt_feedback') else None
-                        if feedback and feedback.block_reason:
-                            logger.warning(
-                                f"Gemini response blocked after tool call: {feedback.block_reason}")
-                            if len(self.chat_history) >= 2 and self.chat_history[-1].role == "tool" and self.chat_history[-2].role == "model":
-                                self.chat_history.pop()
-                                self.chat_history.pop()
-                            return f"Response blocked after tool call: {feedback.block_reason}. {getattr(feedback, 'block_reason_message', '')}"
-                        if len(self.chat_history) >= 2 and self.chat_history[-1].role == "tool" and self.chat_history[-2].role == "model":
-                            self.chat_history.pop()
-                            self.chat_history.pop()
-                        return "Error: No response content from Gemini after tool execution."
-
-                    final_model_content = response.candidates[0].content
-
-                    if not final_model_content.parts:
-                        logger.warning(
-                            "Received final model content with empty parts after tool call.")
-                        if len(self.chat_history) >= 2 and self.chat_history[-1].role == "tool" and self.chat_history[-2].role == "model":
-                            self.chat_history.pop()
-                            self.chat_history.pop()
-                        return "Received empty response after tool call (no parts)."
-
-                    self.chat_history.append(final_model_content)
-                    if final_model_content.parts and hasattr(final_model_content.parts[0], 'text') and final_model_content.parts[0].text is not None:
-                        final_reply_text = final_model_content.parts[0].text
-                        logger.info("Received final text response from Gemini after tool call.")
-                    else:
-                        logger.warning("Final Gemini response after tool call has no text part.")
-                        final_reply_text = "Received empty response after tool call (no text part)."
-
-                    # Prepend status messages to the final reply
-                    status_prefix = "\n".join(tool_status_messages) + "\n\n" if tool_status_messages else ""
-                    return status_prefix + final_reply_text
-                else:
-                    logger.error(
-                        "function_calls_to_execute was present, but tool_response_parts became empty.")
-                    return "Error: Tool calls were requested but no responses could be generated."
+                logger.info(
+                    f"Gemini requested {len(function_calls_to_execute)} tool call(s).")
+                # Just return the tool request to the frontend for approval.
+                tool_calls = []
+                for fc in function_calls_to_execute:
+                    tool_calls.append({
+                        "name": fc.name,
+                        # Handle potential None for args
+                        "args": dict(fc.args) if fc.args else {}
+                    })
+                return [{"type": "tool_request", "tool_calls": tool_calls}]
 
             elif model_content.parts and hasattr(model_content.parts[0], 'text') and model_content.parts[0].text is not None:
                 logger.info("Received standard text response from Gemini (no tool call).")
-                return model_content.parts[0].text
+                return [{"type": "text", "content": model_content.parts[0].text}]
             else:
                 logger.warning("Received Gemini response with no text part and no tool call.")
-                return "Received response with no text."
+                return [{"type": "text", "content": "Received response with no text."}]
 
         except genai_errors.APIError as e:
             logger.error(f"Gemini API error: {e}")
             if self.chat_history and self.chat_history[-1].role == "user":
                 self.chat_history.pop()
-            return f"Gemini API Error: {e.message}"
+            return [{"type": "error", "content": f"Gemini API Error: {e.message}"}]
         except Exception as e:
             logger.error(f"Error processing query: {e}", exc_info=True)
             if self.chat_history and self.chat_history[-1].role == "user":
                 self.chat_history.pop()
-            return f"An unexpected error occurred: {e}"
+            return [{"type": "error", "content": f"An unexpected error occurred: {e}"}]
+
+    async def _handle_tool_response(self, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+        logger.info(f"Handling tool response: {payload}")
+
+        approved = payload.get("approved", False)
+        tool_call_to_process = payload.get("tool_call")
+
+        if not tool_call_to_process or 'name' not in tool_call_to_process:
+            return [{"type": "error", "content": "Invalid tool_response payload. Missing 'tool_call' or 'name'."}]
+
+        # --- History Validation ---
+        if not self.chat_history:
+            logger.warning("Received tool response but chat history is empty.")
+            return [{"type": "error", "content": "Cannot process tool response: chat history is empty."}]
+
+        last_model_turn = self.chat_history[-1]
+        if last_model_turn.role != "model" or not any(part.function_call for part in last_model_turn.parts):
+            logger.warning(f"Received tool response, but last history entry is not a model's function call. Last entry: {last_model_turn}")
+            return [{"type": "error", "content": "Cannot process tool response: last message was not a tool request."}]
+        
+        # Find the specific function call that matches the one being approved/denied
+        original_function_call = next((part.function_call for part in last_model_turn.parts if part.function_call and part.function_call.name == tool_call_to_process['name']), None)
+
+        if not original_function_call:
+            logger.warning(f"Could not find matching tool request in history for '{tool_call_to_process['name']}'.")
+            return [{"type": "error", "content": f"Matching tool request for '{tool_call_to_process['name']}' not found."}]
+        # --- End History Validation ---
+
+        messages_to_return = []
+        tool_response_parts = []
+
+        if approved:
+            tool_name = tool_call_to_process['name']
+            tool_args = tool_call_to_process.get('args', {})
+            
+            logger.info(f"Executing approved tool call: {tool_name} with args: {tool_args}")
+            status, content = await self.execute_mcp_tool(tool_name, tool_args)
+            
+            messages_to_return.append({
+                "type": "tool_result",
+                "tool_name": tool_name,
+                "status": status,
+                "content": content
+            })
+            
+            gemini_tool_result_content = content if status == "Success" else f"Error: {status}"
+            tool_response_parts.append(genai_types.Part.from_function_response(
+                name=tool_name,
+                response={"result": gemini_tool_result_content},
+            ))
+        else:
+            tool_name = tool_call_to_process['name']
+            logger.info(f"Tool call '{tool_name}' was denied by the user.")
+            
+            messages_to_return.append({
+                "type": "tool_result",
+                "tool_name": tool_name,
+                "status": "Denied",
+                "content": "User denied the tool call."
+            })
+
+            tool_response_parts.append(genai_types.Part.from_function_response(
+                name=tool_name,
+                response={"result": "User denied the tool call. Please inform the user and ask for alternative instructions."},
+            ))
+
+        # --- Send result back to Gemini ---
+        self.chat_history.append(genai_types.Content(role="tool", parts=tool_response_parts))
+        
+        try:
+            config = genai_types.GenerateContentConfig(tools=self.tools)
+            logger.info(f"Sending tool results back to Gemini model: {self.gemini_model_name}")
+            response = await self.gemini_client.models.generate_content(
+                model=self.gemini_model_name,
+                contents=self.chat_history,
+                config=config,
+            )
+
+            if not response.candidates or not response.candidates[0].content or not response.candidates[0].content.parts:
+                 logger.warning("Gemini response missing content after tool call.")
+                 final_text = "Received an empty response from the AI after the tool call."
+            else:
+                final_model_content = response.candidates[0].content
+                self.chat_history.append(final_model_content)
+                final_text = final_model_content.parts[0].text if hasattr(final_model_content.parts[0], 'text') else "No text part in final response."
+
+            messages_to_return.append({"type": "text", "content": final_text})
+            return messages_to_return
+
+        except Exception as e:
+            logger.error(f"Error calling Gemini after tool response: {e}", exc_info=True)
+            return messages_to_return + [{"type": "error", "content": f"An error occurred while getting the final response: {e}"}]
 
     async def cleanup(self):
         logger.info("Cleaning up MCPChatApp resources...")

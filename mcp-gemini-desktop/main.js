@@ -12,42 +12,7 @@ const __dirname = path.dirname(__filename);
 
 const store = new Store();
 let mainWindow;
-let settingsWindow = null;
 const pythonPort = 5001;
-
-function createSettingsWindow() {
-  if (settingsWindow) {
-    settingsWindow.focus();
-    return;
-  }
-  settingsWindow = new BrowserWindow({
-    width: 400,
-    height: 200,
-    title: "Settings",
-    parent: mainWindow,
-    modal: true,
-    show: false,
-    resizable: false,
-    minimizable: false,
-    maximizable: false,
-    webPreferences: {
-      preload: path.join(__dirname, "settings_preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-    // backgroundColor: "#f4f1e7", // Let HTML/CSS define background
-  });
-
-  settingsWindow.loadFile(path.join(__dirname, "settings.html"));
-
-  settingsWindow.once("ready-to-show", () => {
-    settingsWindow.show();
-  });
-
-  settingsWindow.on("closed", () => {
-    settingsWindow = null;
-  });
-}
 
 function createWindow() {
   console.log("[createWindow] Attempting to create main window...");
@@ -113,9 +78,6 @@ function createWindow() {
   mainWindow.on("closed", () => {
     console.log("[createWindow] Main window closed.");
     mainWindow = null;
-    if (settingsWindow) {
-      settingsWindow.close();
-    }
   });
 
   // mainWindow.on("ready-to-show", () => {
@@ -233,16 +195,6 @@ ipcMain.handle("change-workspace-and-reload", async () => {
   }
 });
 
-ipcMain.handle("open-settings-dialog", () => {
-  createSettingsWindow();
-});
-
-ipcMain.on("close-settings-dialog", (event) => {
-  const win = BrowserWindow.fromWebContents(event.sender);
-  if (win) {
-    win.close();
-  }
-});
 
 // Handler to read file content
 ipcMain.handle("read-file-content", async (event, filePath) => {
@@ -261,68 +213,6 @@ ipcMain.handle("read-file-content", async (event, filePath) => {
   }
 });
 
-// --- Model Switching IPC Handlers ---
-
-ipcMain.handle("list-models", async () => {
-  console.log("[ipcMain] Handling list-models request");
-  try {
-    const response = await fetch(`http://127.0.0.1:${pythonPort}/list-models`);
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
-    }
-    console.log("[ipcMain] list-models response:", data);
-    return data.models; // Assuming backend returns { status: 'success', models: [...] }
-  } catch (error) {
-    console.error("[ipcMain] Error listing models:", error);
-    throw error; // Re-throw to be caught in renderer
-  }
-});
-
-ipcMain.handle("get-model", async () => {
-  console.log("[ipcMain] Handling get-model request");
-  try {
-    const response = await fetch(`http://127.0.0.1:${pythonPort}/get-model`);
-    const data = await response.json();
-     if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
-    }
-    console.log("[ipcMain] get-model response:", data);
-    return data.model; // Assuming backend returns { status: 'success', model: '...' }
-  } catch (error) {
-    console.error("[ipcMain] Error getting current model:", error);
-    throw error;
-  }
-});
-
-ipcMain.handle("set-model", async (event, modelName) => {
-  console.log(`[ipcMain] Handling set-model request for: ${modelName}`);
-  try {
-    const response = await fetch(`http://127.0.0.1:${pythonPort}/set-model`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: modelName }),
-    });
-    const data = await response.json();
-     if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
-    }
-    console.log("[ipcMain] set-model response:", data);
-    // Optionally notify main window or handle success/error feedback
-    if (mainWindow) {
-        mainWindow.webContents.send("model-update-status", { success: true, message: data.message, model: modelName });
-    }
-    return { success: true, message: data.message }; // Return success status to settings window
-  } catch (error) {
-    console.error(`[ipcMain] Error setting model to ${modelName}:`, error);
-     if (mainWindow) {
-        mainWindow.webContents.send("model-update-status", { success: false, message: error.message, model: modelName });
-    }
-    throw error; // Re-throw for settings window
-  }
-});
-
-// --- End Model Switching IPC Handlers ---
 
 ipcMain.handle("show-open-dialog", async (event, options) => {
   if (!mainWindow) {
@@ -376,28 +266,3 @@ ipcMain.handle("show-open-dialog", async (event, options) => {
 });
 
 
-ipcMain.on("save-api-key", async (event, apiKey) => {
-  console.log("[save-api-key] Received API key from settings dialog.");
-  let result;
-  try {
-    const response = await fetch(`http://127.0.0.1:${pythonPort}/set-api-key`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({apiKey: apiKey}),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
-    }
-    console.log("[save-api-key] Backend responded:", data);
-    result = {success: true, message: data.message};
-  } catch (error) {
-    console.error("[save-api-key] Error setting API key via backend:", error);
-    result = {success: false, message: error.message};
-  }
-  if (mainWindow) {
-    mainWindow.webContents.send("api-key-update-status", result);
-  }
-});

@@ -1,27 +1,41 @@
 <div class="sidebar-content-wrapper">
-
-    <mat-toolbar class="sidebar-toolbar">
-        <span>Workspace</span>
-    </mat-toolbar>
-    <div class="sidebar-section">
-        <app-workspace></app-workspace>
-    </div>
-
-    <mat-toolbar class="sidebar-toolbar">
-        <span>MCP Servers</span>
-    </mat-toolbar>
-
-    <div class="sidebar-section">
-        <app-server-list></app-server-list>
-    </div>
-
-    <div class="sidebar-footer-material"> <!-- Changed class -->
-        <button mat-flat-button color="primary" id="add-server-btn-material" (click)="addServer()">
+    <div class="tab-header">
+        <button mat-icon-button (click)="setTab('new')" [class.active]="activeTab === 'new'">
             <mat-icon>add</mat-icon>
-            Add Server
         </button>
-        <button mat-icon-button id="settings-btn-material" title="Settings" (click)="openSettings()">
-            <mat-icon>settings</mat-icon>
+        <button mat-icon-button (click)="setTab('servers')" [class.active]="activeTab === 'servers'">
+            <mat-icon>dvr</mat-icon>
         </button>
+    </div>
+
+    <div [ngSwitch]="activeTab">
+        <div *ngSwitchCase="'new'">
+            <mat-toolbar class="sidebar-toolbar">
+                <span>Workspace</span>
+            </mat-toolbar>
+            <div class="sidebar-section">
+                <app-workspace></app-workspace>
+            </div>
+            <div class="sidebar-footer-material">
+                <button mat-flat-button color="primary" id="add-server-btn-material" (click)="addServer()">
+                    <mat-icon>add</mat-icon>
+                    Add Server
+                </button>
+            </div>
+        </div>
+
+        <div *ngSwitchCase="'servers'">
+            <div class="sidebar-footer-material done-button-container">
+                <button mat-stroked-button (click)="setTab('new')">
+                    Done
+                </button>
+            </div>
+            <mat-toolbar class="sidebar-toolbar">
+                <span>MCP Servers</span>
+            </mat-toolbar>
+            <div class="sidebar-section">
+                <app-server-list></app-server-list>
+            </div>
+        </div>
     </div>
 </div>

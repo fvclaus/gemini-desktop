@@ -8,14 +8,20 @@
   font-weight: 500; /* Or let Material theme handle */
 }
 
-.mat-mdc-chip.connected {
-  background-color: var(--status-connected) !important; /* Use CSS var from :root */
-  color: white !important;
+.status-circle {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-left: 8px;
 }
 
-.mat-mdc-chip.error {
-  background-color: var(--status-error) !important; /* Use CSS var from :root */
-  color: white !important;
+.status-circle.connected {
+  background-color: var(--status-connected);
+}
+
+.status-circle.error {
+  background-color: var(--status-error);
 }
 
 .tools-title-material {
@@ -33,3 +39,9 @@
   font-size: 0.8em !important;
 }
 */
+.server-item-card {
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  padding: 8px;
+}

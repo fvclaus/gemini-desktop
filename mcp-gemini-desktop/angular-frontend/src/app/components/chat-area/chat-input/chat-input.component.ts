@@ -4,18 +4,24 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { TextFieldModule } from '@angular/cdk/text-field'; // For CdkTextareaAutosize
+import { TextFieldModule } from '@angular/cdk/text-field';
+import { CommonModule } from '@angular/common';
+import { ModelManagementService } from '../../../services/model-management.service';
+import { ModalService } from '../../../services/modal.service';
+import { MatDivider, MatDividerModule } from '@angular/material/divider';
 
 @Component({
   selector: 'app-chat-input',
   standalone: true,
   imports: [
+    CommonModule,
     FormsModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
     MatIconModule,
-    TextFieldModule
+    TextFieldModule,
+    MatDividerModule
   ],
   templateUrl: './chat-input.component.html',
   styleUrl: './chat-input.component.css'
@@ -23,9 +29,20 @@ import { TextFieldModule } from '@angular/cdk/text-field'; // For CdkTextareaAut
 export class ChatInputComponent {
   @Output() messageSent = new EventEmitter<string>();
   messageText: string = '';
+  isModelDropdownOpen = false;
+
+  models$: ModelManagementService['models$'];
+  selectedModel$: ModelManagementService['selectedModel$'];
+
+  constructor(
+    private modelManagementService: ModelManagementService,
+    private modalService: ModalService
+  ) {
+    this.models$ = this.modelManagementService.models$;
+    this.selectedModel$ = this.modelManagementService.selectedModel$;
+  }
 
   sendMessageOnEnter(event: Event): void {
-    // Check if it's a KeyboardEvent and the Enter key (without Shift)
     if (event instanceof KeyboardEvent && event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       this.sendMessage();
@@ -36,16 +53,19 @@ export class ChatInputComponent {
     if (this.messageText.trim()) {
       this.messageSent.emit(this.messageText.trim());
       this.messageText = '';
-      // Textarea autosize should handle reset, but manual adjustment might be needed
-      // if specific visual behavior is desired after send.
     }
   }
 
-  adjustTextareaHeight(event: Event): void {
-    // CDK's autosize directive handles this automatically.
-    // This method can be removed if no additional logic is needed on input.
-    // For now, keeping it in case specific logic is added later.
-    const textarea = event.target as HTMLTextAreaElement;
-    // console.log('Textarea scrollHeight:', textarea.scrollHeight);
+  toggleModelDropdown(): void {
+    this.isModelDropdownOpen = !this.isModelDropdownOpen;
+  }
+
+  selectModel(modelName: string): void {
+    this.modelManagementService.changeModel(modelName);
+    this.isModelDropdownOpen = false;
+  }
+
+  editSettings(): void {
+    this.modalService.open('settings-modal');
   }
 }

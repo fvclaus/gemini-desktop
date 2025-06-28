@@ -1,41 +1,38 @@
 import { Component, Input, SecurityContext } from '@angular/core';
 import { CommonModule, NgClass, NgIf } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-// marked and katex are not directly used here anymore if ChatService pre-renders HTML
-// import { marked } from 'marked';
-// import katex from 'katex';
-import { Message } from '../../../services/chat.service'; // Import Message interface from ChatService
+import { ChatService, Message } from '../../../services/chat.service'; // Import ChatService and Message interface
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-chat-message',
   standalone: true,
-  imports: [CommonModule, NgClass, NgIf, MatCardModule, MatIconModule],
+  imports: [CommonModule, NgClass, NgIf, MatCardModule, MatIconModule, MatButtonModule],
   templateUrl: './chat-message.component.html',
   styleUrl: './chat-message.component.css'
 })
 export class ChatMessageComponent {
   @Input() message: Message | undefined;
 
-  constructor(private sanitizer: DomSanitizer) {}
+  constructor(private sanitizer: DomSanitizer, private chatService: ChatService) {}
 
   isSystemMessage(): boolean {
     return this.message?.sender === 'system';
   }
 
   isToolStatusMessage(): boolean {
-    return this.message?.type === 'tool_call_start' || this.message?.type === 'tool_call_end';
+    return this.message?.type === 'tool_result';
   }
 
-  // Helper to determine if the details section should be open by default
   isDetailsOpen(): boolean {
-    return this.isToolStatusMessage() || this.message?.type === 'error';
+    return this.isToolStatusMessage() || this.message?.type === 'error' || this.message?.type === 'tool_request';
   }
 
   getSummaryColor(): string | null {
-    if (this.message?.type === 'tool_call_end') {
-      const isError = this.message.details?.toLowerCase().includes('error'); // A bit simplistic, might need refinement
+    if (this.message?.type === 'tool_result') {
+      const isError = this.message.details?.toLowerCase().includes('error');
       return isError ? 'var(--status-error)' : null;
     }
     if (this.message?.type === 'error') {
@@ -48,16 +45,15 @@ export class ChatMessageComponent {
     if (!this.message || !this.message.type) return 'info_outline';
 
     switch (this.message.type) {
-      case 'tool_call_start':
-        return 'hourglass_empty';
-      case 'tool_call_end':
+      case 'tool_request':
+        return 'build';
+      case 'tool_result':
         const isError = this.message.details?.toLowerCase().includes('error');
         return isError ? 'error_outline' : 'check_circle_outline';
       case 'error':
         return 'warning_amber';
       case 'log':
       case 'welcome':
-      case 'tool_announcement': // Could have a specific icon
       default:
         return 'info_outline';
     }
@@ -67,31 +63,24 @@ export class ChatMessageComponent {
     if (!this.message) return '';
 
     switch (this.message.type) {
-      case 'tool_call_start':
-        const toolNameStart = this.message.details?.split(' ')[0] || 'Unknown Tool';
-        return `Calling Tool: ${toolNameStart}...`;
-      case 'tool_call_end':
-        const toolNameEnd = this.message.details?.split(' ')[0] || 'Unknown Tool';
-        const isError = this.message.details?.toLowerCase().includes('error');
-        return `Tool Finished: ${toolNameEnd} (${isError ? 'Error' : 'Success'})`;
+      case 'tool_request':
+        return 'Tool Call Request';
+      case 'tool_result':
+        return `Tool Result: ${this.message.text}`;
       case 'error':
         return 'System Error';
       case 'welcome':
         return 'Welcome';
       case 'log':
         return 'System Log';
-      case 'tool_announcement':
-        return 'Tool Announcement'; // Or use message.text directly
       default:
-        return this.message.text || 'System Message'; // Fallback for general system messages
+        return this.message.text || 'System Message';
     }
   }
 
   getDetailsContent(): string {
     if (!this.message) return '';
-    // For tool calls and errors, 'details' field is preferred.
-    // For other system messages, 'text' might be the primary content.
-    if (this.message.type === 'tool_call_start' || this.message.type === 'tool_call_end' || this.message.type === 'error') {
+    if (this.message.type === 'tool_result' || this.message.type === 'error') {
       return this.message.details || this.message.text;
     }
     return this.message.text;
@@ -114,5 +103,15 @@ export class ChatMessageComponent {
     // If they did, that logic would go here.
     const sanitizedText = this.sanitizer.sanitize(SecurityContext.HTML, this.message.text);
     return sanitizedText || '';
+  }
+
+  onToolResponse(approved: boolean, toolCall: any): void {
+    if (this.message) {
+      this.chatService.sendToolResponse(approved, toolCall);
+      // Visually disable the buttons after an action is taken
+      if (this.message.tool_calls) {
+        this.message.tool_calls = this.message.tool_calls.filter(tc => tc !== toolCall);
+      }
+    }
   }
 }

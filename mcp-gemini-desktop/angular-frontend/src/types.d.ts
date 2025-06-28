@@ -34,7 +34,6 @@ declare global {
       getPythonPort: () => Promise<number>;
       showOpenDialog: (options: ShowOpenFileDialog | ShowOpenDirectoryDialog) => Promise<ShowOpenDialogCanceledResponse | ShowOpenDialogResponse>;
       readFileContent: (filePath: string) => Promise<string>;
-      openSettingsDialog: () => void;
       onApiKeyUpdate: (callback: (result: { success: boolean; message?: string }) => void) => void;
       // Add any other electronAPI methods that might be used by services
     }

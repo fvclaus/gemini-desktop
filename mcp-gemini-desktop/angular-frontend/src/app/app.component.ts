@@ -3,12 +3,14 @@ import { CommonModule } from '@angular/common';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { ChatAreaComponent } from './components/chat-area/chat-area.component';
 import { MatSidenavModule } from '@angular/material/sidenav';
-// Removed WorkspaceState import from WorkspaceComponent, WorkspaceComponent itself is still needed for the template
 import { WorkspaceComponent } from './components/sidebar/workspace/workspace.component';
-import { WorkspaceStateService, WorkspaceState } from './services/workspace-state.service'; // Corrected path
+import { WorkspaceStateService, WorkspaceState } from './services/workspace-state.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
+import { SettingsModalComponent } from './components/settings-modal/settings-modal.component';
+import { SettingsComponent } from './components/settings/settings.component';
+import { ModelManagementService } from './services/model-management.service';
 
 
 @Component({
@@ -19,22 +21,26 @@ import { MatIcon } from '@angular/material/icon';
     SidebarComponent,
     ChatAreaComponent,
     MatSidenavModule,
-    WorkspaceComponent, // Add WorkspaceComponent here
+    WorkspaceComponent,
     MatProgressSpinnerModule,
     MatButtonModule,
-    MatIcon
+    MatIcon,
+    SettingsModalComponent,
+    SettingsComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
 export class AppComponent {
   title = 'GemCP Chat';
-  // Removed local workspaceState property
 
   constructor(
-    private cdr: ChangeDetectorRef, // cdr might still be useful for other async operations not related to signals
-    public workspaceStateService: WorkspaceStateService // Injected service, public for template access to signal
-  ) {}
+    private cdr: ChangeDetectorRef,
+    public workspaceStateService: WorkspaceStateService,
+    private modelManagementService: ModelManagementService
+  ) {
+    this.modelManagementService.initializeModels();
+  }
 
   // Removed onWorkspaceStateChanged method
 

@@ -1,0 +1,27 @@
+<form [formGroup]="settingsForm" (ngSubmit)="onSave()">
+  <div class="form-group">
+    <label for="api-key">Gemini API Key:</label>
+    <input type="password" id="api-key" formControlName="apiKey">
+  </div>
+
+  <div class="form-group">
+    <label for="model-select">Gemini Model:</label>
+    <select id="model-select" formControlName="model" [disabled]="(isLoading$ | async)!">
+      <ng-container *ngIf="(models$ | async) as models">
+        <option *ngFor="let model of models" [value]="model" [selected]="model === (selectedModel$ | async)">
+          {{ model }}
+        </option>
+      </ng-container>
+      <ng-container *ngIf="!(models$ | async) || (models$ | async)?.length === 0">
+        <option value="" disabled selected>
+          {{ (isLoading$ | async) ? 'Loading models...' : 'No models available' }}
+        </option>
+      </ng-container>
+    </select>
+  </div>
+
+  <div class="buttons">
+    <button type="button" id="cancel-btn" (click)="onCancel()">Cancel</button>
+    <button type="submit" id="save-btn" [disabled]="settingsForm.invalid || (isLoading$ | async)">Save</button>
+  </div>
+</form>
