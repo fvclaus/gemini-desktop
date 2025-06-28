@@ -1,40 +1,39 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-
-export interface ModelsResponse {
-  models: string[];
-  status: string;
-}
-
-export interface ModelResponse {
-  model: string;
-  status: string;
-}
-
-export interface StatusResponse {
-  status: string;
-  message: string;
-}
-
+import { BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SettingsService {
-  private readonly backendUrl = 'http://127.0.0.1:5001';
 
-  constructor(private http: HttpClient) { }
+  constructor() { }
 
-  getModels(): Observable<ModelsResponse> {
-    return this.http.get<ModelsResponse>(`${this.backendUrl}/list-models`);
+  getApiKey(): string | null {
+    return localStorage.getItem('gemini-api-key');
   }
 
-  setModel(modelName: string): Observable<StatusResponse> {
-    return this.http.post<StatusResponse>(`${this.backendUrl}/set-model`, { model: modelName });
+  saveApiKey(apiKey: string): void {
+    localStorage.setItem('gemini-api-key', apiKey);
   }
 
-  saveApiKey(apiKey: string): Observable<StatusResponse> {
-    return this.http.post<StatusResponse>(`${this.backendUrl}/set-api-key`, { apiKey: apiKey });
+  getModels(): string[] {
+    // In the future, this could fetch from the API, but for now, it's a static list.
+    return [
+      "gemini-2.5-pro-preview-05-06",
+      "gemini-2.5-flash"
+    ];
+  }
+
+  getModel(): string {
+    const availableModels = this.getModels();
+    const lastModel = localStorage.getItem('gemini-model');
+    const modelToSelect = lastModel && availableModels.includes(lastModel)
+      ? lastModel
+      : availableModels[0];
+    return modelToSelect;
+  }
+
+  setModel(modelName: string): void {
+    localStorage.setItem('gemini-model', modelName);
   }
 }

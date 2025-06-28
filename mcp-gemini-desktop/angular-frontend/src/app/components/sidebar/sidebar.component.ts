@@ -29,9 +29,6 @@ export class SidebarComponent {
 
   constructor(private chatService: ChatService, private modalService: ModalService) {}
 
-  addServer(): void {
-    this.chatService.openAddServerDialog();
-  }
 
   setTab(tab: 'new' | 'servers'): void {
     this.activeTab = tab;

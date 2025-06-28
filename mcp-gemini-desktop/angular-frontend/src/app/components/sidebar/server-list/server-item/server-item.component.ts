@@ -33,7 +33,8 @@ export class ServerItemComponent {
 
   deleteServer(): void {
     if (this.server && this.server.identifier) {
-      this.chatService.deleteServer(this.server.identifier);
+      // TODO
+      // this.chatService.deleteServer(this.server.identifier);
     } else {
       console.error('Cannot delete server: server data or identifier is missing.', this.server);
     }

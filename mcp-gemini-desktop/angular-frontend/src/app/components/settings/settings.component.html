@@ -6,15 +6,10 @@
 
   <div class="form-group">
     <label for="model-select">Gemini Model:</label>
-    <select id="model-select" formControlName="model" [disabled]="(isLoading$ | async)!">
-      <ng-container *ngIf="(models$ | async) as models">
-        <option *ngFor="let model of models" [value]="model" [selected]="model === (selectedModel$ | async)">
+    <select id="model-select" formControlName="model">
+      <ng-container>
+        <option *ngFor="let model of models" [value]="model" [selected]="model === selectedModel">
           {{ model }}
-        </option>
-      </ng-container>
-      <ng-container *ngIf="!(models$ | async) || (models$ | async)?.length === 0">
-        <option value="" disabled selected>
-          {{ (isLoading$ | async) ? 'Loading models...' : 'No models available' }}
         </option>
       </ng-container>
     </select>
@@ -22,6 +17,6 @@
 
   <div class="buttons">
     <button type="button" id="cancel-btn" (click)="onCancel()">Cancel</button>
-    <button type="submit" id="save-btn" [disabled]="settingsForm.invalid || (isLoading$ | async)">Save</button>
+    <button type="submit" id="save-btn" [disabled]="settingsForm.invalid">Save</button>
   </div>
 </form>

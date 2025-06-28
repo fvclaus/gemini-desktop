@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { ModelManagementService } from '../../services/model-management.service';
 import { SettingsService } from '../../services/settings.service';
 import { ModalService } from '../../services/modal.service';
 import { Subscription } from 'rxjs';
@@ -14,19 +13,15 @@ import { CommonModule } from '@angular/common';
 })
 export class SettingsComponent implements OnInit {
   settingsForm: FormGroup;
-  models$: ModelManagementService['models$'];
-  selectedModel$: ModelManagementService['selectedModel$'];
-  isLoading$: ModelManagementService['isLoading$'];
+  models: string[] = [];
+  selectedModel: string | null = null;
 
   constructor(
     private fb: FormBuilder,
-    private modelManagementService: ModelManagementService,
     private settingsService: SettingsService,
     private modalService: ModalService
   ) {
-    this.models$ = this.modelManagementService.models$;
-    this.selectedModel$ = this.modelManagementService.selectedModel$;
-    this.isLoading$ = this.modelManagementService.isLoading$;
+    this.models = settingsService.getModels();
     this.settingsForm = this.fb.group({
       apiKey: [''],
       model: ['']
@@ -34,11 +29,6 @@ export class SettingsComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.selectedModel$.subscribe(model => {
-      if (model) {
-        this.settingsForm.get('model')?.setValue(model, { emitEvent: false });
-      }
-    });
   }
 
   onSave(): void {
@@ -50,12 +40,9 @@ export class SettingsComponent implements OnInit {
     const selectedModel = this.settingsForm.get('model')?.value;
 
     if (apiKey) {
-      this.settingsService.saveApiKey(apiKey).subscribe();
+      this.settingsService.saveApiKey(apiKey);
     }
 
-    if (selectedModel) {
-      this.modelManagementService.changeModel(selectedModel);
-    }
 
     this.modalService.close();
   }

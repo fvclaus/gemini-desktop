@@ -68,48 +68,11 @@ export class WorkspaceStateService {
   }
 
   public async setWorkspace(workspacePath: string): Promise<void> {
-    this.ngZone.run(() => this.setLoading(true)); // Set loading true before async operation
-
-    try {
-      const port = await window.electronAPI.getPythonPort();
-      if (!port) {
-        throw new Error('Python backend port not available.');
-      }
-      
-      const url = `http://127.0.0.1:${port}/set-workspace`;
-      console.log(`WorkspaceStateService: Calling backend to set workspace: ${url} with path: ${workspacePath}`);
-
-      // Using firstValueFrom to convert Observable to Promise for await
-      const response = await firstValueFrom(
-        this.http.post<{ status: string; message: string; tools?: string[] }>(url, { workspace_path: workspacePath })
-      );
-
-      if (response.status === 'success') {
-        this.ngZone.run(() => {
-          this._state.update(s => ({
+    this._state.update(s => ({
             ...s,
             path: workspacePath,
             isLoading: false,
             error: null
-          }));
-          console.log('WorkspaceStateService: Workspace set and Python backend confirmed:', workspacePath, 'Registered tools:', response.tools);
-        });
-      } else {
-        throw new Error(response.message || 'Failed to set workspace in Python backend.');
-      }
-    } catch (error) {
-      console.error('WorkspaceStateService: Error setting workspace via Python backend:', error);
-      let errorMessage = 'An unknown error occurred while setting workspace.';
-      if (error instanceof HttpErrorResponse) {
-        errorMessage = error.error?.message || error.message || `HTTP error ${error.status}`;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
-      this.ngZone.run(() => {
-        this.setError(errorMessage); // setLoading(false) is handled by setError
-      });
-      // Optionally re-throw or decide if this is a critical failure
-    }
+          }))
   }
 }

@@ -10,7 +10,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { SettingsModalComponent } from './components/settings-modal/settings-modal.component';
 import { SettingsComponent } from './components/settings/settings.component';
-import { ModelManagementService } from './services/model-management.service';
 
 
 @Component({
@@ -37,9 +36,7 @@ export class AppComponent {
   constructor(
     private cdr: ChangeDetectorRef,
     public workspaceStateService: WorkspaceStateService,
-    private modelManagementService: ModelManagementService
   ) {
-    this.modelManagementService.initializeModels();
   }
 
   // Removed onWorkspaceStateChanged method

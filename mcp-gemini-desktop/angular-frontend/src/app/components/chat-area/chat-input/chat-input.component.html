@@ -13,11 +13,11 @@
     <div class="model-selector">
       <button mat-button class="model-selector-button" (click)="toggleModelDropdown()">
         <mat-icon>model_training</mat-icon>
-        <span>{{ (selectedModel$ | async) || 'Select Model' }}</span>
+        <span>{{ selectedModel || 'Select Model' }}</span>
         <mat-icon>arrow_drop_up</mat-icon>
       </button>
       <div class="model-dropdown" [class.open]="isModelDropdownOpen">
-        <ng-container *ngIf="(models$ | async) as models">
+        <ng-container>
           <button *ngFor="let model of models" mat-menu-item (click)="selectModel(model)">
             {{ model }}
           </button>

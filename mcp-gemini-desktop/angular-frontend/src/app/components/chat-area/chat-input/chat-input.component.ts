@@ -6,9 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { CommonModule } from '@angular/common';
-import { ModelManagementService } from '../../../services/model-management.service';
 import { ModalService } from '../../../services/modal.service';
 import { MatDivider, MatDividerModule } from '@angular/material/divider';
+import { SettingsService } from '../../../services/settings.service';
 
 @Component({
   selector: 'app-chat-input',
@@ -31,15 +31,15 @@ export class ChatInputComponent {
   messageText: string = '';
   isModelDropdownOpen = false;
 
-  models$: ModelManagementService['models$'];
-  selectedModel$: ModelManagementService['selectedModel$'];
+  models: string[] = []
+  selectedModel: string | null = null;
 
   constructor(
-    private modelManagementService: ModelManagementService,
+    private settingsService: SettingsService,
     private modalService: ModalService
   ) {
-    this.models$ = this.modelManagementService.models$;
-    this.selectedModel$ = this.modelManagementService.selectedModel$;
+    this.models = settingsService.getModels();
+    this.selectedModel = settingsService.getModel();
   }
 
   sendMessageOnEnter(event: Event): void {
@@ -61,7 +61,7 @@ export class ChatInputComponent {
   }
 
   selectModel(modelName: string): void {
-    this.modelManagementService.changeModel(modelName);
+    this.settingsService.setModel(modelName);
     this.isModelDropdownOpen = false;
   }
 
