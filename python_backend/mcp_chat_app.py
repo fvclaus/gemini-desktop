@@ -13,7 +13,7 @@ from google.genai import errors as genai_errors
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -29,12 +29,13 @@ class MCPChatApp:
         self.tool_to_session: Dict[str, ClientSession] = {}
         self.chat_history: List[genai_types.Content] = []
         self.server_resources: Dict[str, Dict[str, Any]] = {}
-        self.cached_gemini_declarations: Optional[List[genai_types.FunctionDeclaration]] = None
-        self.gemini_tools_dirty: bool = True
+        # self.cached_gemini_declarations: Optional[List[genai_types.Tool]] = None
+        self.tools: list[genai_types.Tool] = []
         self.status_check_task: Optional[asyncio.Task] = None
         self.api_key: Optional[str] = None
         self.available_models: List[str] = [
             "gemini-2.5-pro-preview-05-06",
+            "gemini-2.5-flash"
         ]
         self.type_mapping: Dict[str, str] = {
             'string': 'STRING',
@@ -116,7 +117,8 @@ class MCPChatApp:
             'handlers': tool_handlers # Store handlers for execution
         }
 
-        added_tools_names = []
+        function_declarations: list[genai_types.FunctionDeclaration] = []
+
         for tool_schema in tools_schema:
             tool_name = tool_schema.get("name")
             if not tool_name:
@@ -128,18 +130,17 @@ class MCPChatApp:
                     f"Tool name conflict: '{tool_name}' already exists. Skipping tool from local server '{identifier}'.")
             else:
                 # Create a mock tool object that mimics the structure expected by get_gemini_tool_declarations
-                mock_mcp_tool = type('MockMCPTool', (object,), {
-                    'name': tool_name,
-                    'description': tool_schema.get("description", ""),
-                    'inputSchema': tool_schema.get("input_schema", {})
-                })()
-                self.mcp_tools.append(mock_mcp_tool)
+                function_declarations.append(genai_types.FunctionDeclaration(
+                    name=tool_name,
+                    parameters=tool_schema.get("input_schema", {}),
+                    description=tool_schema.get("description", "")
+                ))
                 self.tool_to_session[tool_name] = identifier # Map tool name to server identifier
-                added_tools_names.append(tool_name)
                 self.server_resources[identifier]['tools'].append(tool_name)
-                self.gemini_tools_dirty = True
 
-        logger.info(f"Registered {len(added_tools_names)} tools for local server '{identifier}'.")
+        self.tools.append(genai_types.Tool(function_declarations=function_declarations))
+
+        logger.info(f"Registered {len([f.name for f in function_declarations])} tools for local server '{identifier}'.")
 
 
     async def _check_server_status(self, identifier: str, session: ClientSession):
@@ -398,62 +399,6 @@ class MCPChatApp:
             logger.error(f"Error creating genai_types.Schema at '{property_path}' for tool '{tool_name_for_logging}' with processed args {args_for_gemini_schema}: {e}", exc_info=True)
             return None
 
-    def get_gemini_tool_declarations(self) -> List[genai_types.FunctionDeclaration]:
-        if not self.gemini_tools_dirty and self.cached_gemini_declarations is not None:
-            return self.cached_gemini_declarations
-
-        logger.info("Re-generating Gemini tool declarations.")
-        declarations = []
-
-        for mcp_tool in self.mcp_tools:
-            tool_name = getattr(mcp_tool, 'name', 'UnknownTool')
-            try:
-                mcp_input_schema = getattr(mcp_tool, 'inputSchema', None)
-                mcp_schema_dict: Optional[Dict[str, Any]] = None
-
-                if hasattr(mcp_input_schema, 'model_dump'): # Pydantic model
-                    mcp_schema_dict = mcp_input_schema.model_dump(exclude_none=True)
-                elif isinstance(mcp_input_schema, dict): # Plain dict
-                    mcp_schema_dict = mcp_input_schema
-                
-                if not mcp_schema_dict:
-                    logger.warning(f"MCP tool '{tool_name}' has no parsable inputSchema. Skipping.")
-                    continue
-
-                # The top-level parameters schema for a function declaration must be an OBJECT.
-                if mcp_schema_dict.get('type', '').lower() != 'object':
-                    logger.warning(
-                        f"MCP tool '{tool_name}' has non-OBJECT inputSchema (type: '{mcp_schema_dict.get('type')}'). Skipping for Gemini.")
-                    continue
-                
-                # Convert the entire parameter schema using the recursive helper
-                gemini_params_schema = self._mcp_schema_to_gemini_schema(mcp_schema_dict, tool_name)
-
-                if gemini_params_schema:
-                    # Ensure the top-level schema passed to FunctionDeclaration is indeed an OBJECT type
-                    if gemini_params_schema.type != genai_types.Type.OBJECT:
-                        logger.error(f"Root schema for tool '{tool_name}' was not converted to OBJECT type by helper. Actual type: {gemini_params_schema.type}. Skipping.")
-                        continue
-
-                    declaration = genai_types.FunctionDeclaration(
-                        name=tool_name,
-                        description=getattr(mcp_tool, 'description', ''),
-                        parameters=gemini_params_schema,
-                    )
-                    declarations.append(declaration)
-                else:
-                    logger.warning(f"Skipping tool '{tool_name}' for Gemini: Failed to convert its parameter schema.")
-
-            except Exception as e:
-                logger.error(
-                    f"Failed to process MCP tool '{tool_name}' for Gemini declaration: {e}. Skipping this tool.", exc_info=True)
-                continue
-
-        self.cached_gemini_declarations = declarations
-        self.gemini_tools_dirty = False
-        logger.info(f"Cached {len(declarations)} Gemini tool declarations.")
-        return declarations
-
     async def execute_mcp_tool(self, tool_name: str, args: Dict[str, Any]) -> Tuple[str, Optional[str]]:
         """Executes an MCP tool and returns a tuple: (status_string, result_content_or_none)."""
         if tool_name not in self.tool_to_session:
@@ -571,11 +516,8 @@ class MCPChatApp:
         self.chat_history.append(genai_types.Content(
             role="user", parts=[genai_types.Part(text=query)]))
 
-        gemini_function_declarations = self.get_gemini_tool_declarations()
-        gemini_tools = [genai_types.Tool(
-            function_declarations=gemini_function_declarations)] if gemini_function_declarations else None
         config = genai_types.GenerateContentConfig(
-            tools=gemini_tools) if gemini_tools else None
+            tools=self.tools)
 
         try:
             # Ensure the currently set model name is used
