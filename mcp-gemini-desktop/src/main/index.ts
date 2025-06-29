@@ -313,6 +313,29 @@ ipcMain.handle("get-mcp-servers", async () => {
   return Array.from(mcpServerStatuses.values());
 });
 
+ipcMain.handle("call-mcp-tool", async (event, { serverName, toolName, params }) => {
+  console.log(`[call-mcp-tool] Calling tool '${toolName}' on server '${serverName}' with params:`, params);
+  const server = mcpServerStatuses.get(serverName);
+  if (!server || !server.client) {
+    throw new Error(`Server '${serverName}' not found or not connected.`);
+  }
+  if (server.status.state !== McpServerState.STARTED) {
+    throw new Error(`Server '${serverName}' is not in a started state.`);
+  }
+
+  try {
+    const result = await server.client.callTool({
+      name: toolName, 
+      arguments: params
+  });
+    console.log(`[call-mcp-tool] Tool '${toolName}' executed successfully with result:`, result);
+    return result;
+  } catch (error) {
+    console.error(`[call-mcp-tool] Error calling tool '${toolName}' on server '${serverName}':`, error);
+    throw new Error(`Failed to call tool: ${(error as Error).message}`);
+  }
+});
+
 
 // Handler to read file content
 ipcMain.handle("read-file-content", async (event, filePath) => {

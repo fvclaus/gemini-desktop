@@ -38,6 +38,7 @@ declare global {
       onApiKeyUpdate: (callback: (result: { success: boolean; message?: string }) => void) => void;
       onMcpServerStatus: (callback: (servers: McpServerStatus[])=> void) => void;
       getMcpServers: () => Promise<McpServerStatus[]>;
+      callMcpTool: (serverName: string, toolName: string, params: any) => Promise<any>;
       // Add any other electronAPI methods that might be used by services
     }
   }

@@ -34,7 +34,7 @@ export class ServerItemComponent {
   openToolDialog(tool: McpToolDefinition): void {
     this.dialog.open(ToolInfoDialogComponent, {
       width: '600px',
-      data: { tool }
+      data: { tool, serverName: this.server.identifier }
     });
   }
 

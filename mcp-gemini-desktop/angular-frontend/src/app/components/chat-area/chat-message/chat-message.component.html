@@ -13,11 +13,11 @@
                 </summary>
                 <div class="message-details-content-material"
                     [style.overflow-wrap]="isToolStatusMessage() ? 'break-word' : 'normal'">
-                    <div *ngIf="message?.type !== 'tool_request'">
+                    <div *ngIf="message.type !== 'tool_request'">
                         {{ getDetailsContent() }}
                     </div>
-                    <div *ngIf="message?.type === 'tool_request'" class="tool-request-container">
-                        <div *ngFor="let toolCall of message?.tool_calls" class="tool-call-details">
+                    <div *ngIf="message.type === 'tool_request'" class="tool-request-container">
+                        <div *ngFor="let toolCall of message.tool_calls" class="tool-call-details">
                             <strong>Tool:</strong> {{ toolCall.name }}<br>
                             <strong>Arguments:</strong>
                             <pre>{{ toolCall.args | json }}</pre>
@@ -32,7 +32,7 @@
         </mat-card-content>
 
         <!-- AI or User Message -->
-        <mat-card-content *ngIf="!isSystemMessage() && message?.type !== 'tool_request'" class="message-content-material"
+        <mat-card-content *ngIf="!isSystemMessage() && message.type !== 'tool_request'" class="message-content-material"
             [innerHTML]="getFormattedContent()">
             <!-- Content will be rendered here by [innerHTML] -->
         </mat-card-content>

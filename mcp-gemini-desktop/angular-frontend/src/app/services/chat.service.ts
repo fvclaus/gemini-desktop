@@ -119,6 +119,7 @@ export class ChatService {
       if (!message.id) {
         message.id = `${message.sender}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       }
+      console.log('Added new message', message);
       this.messagesSubject.next([...currentMessages, message]);
     });
   }
@@ -195,7 +196,20 @@ export class ChatService {
     });
 
     try {
-      const result = await this.genAI.models.generateContent({ model: this.modelName, contents: this.chatHistory });
+      const result = await this.genAI.models.generateContent({ model: this.modelName, contents: this.chatHistory, config: {
+        tools: this.mcpServersSubject.getValue()
+          .filter(mcpServer => mcpServer.state === "STARTED")
+          .map(mcpServer => {
+
+          return {
+            functionDeclarations: mcpServer.tools.map(t => ({
+              name: t.name,
+              description: t.description,
+              parameters: t.inputSchema
+            }))
+          }
+        })
+      } });
       this.handleGeminiResponse(loadingMessageId, result);
     } catch (error) {
       console.error('Error sending message to Gemini:', error);
@@ -220,7 +234,7 @@ export class ChatService {
     const functionCalls = response.functionCalls;
     if (functionCalls && functionCalls.length > 0) {
       const toolRequestMessage: Message = {
-        sender: 'ai',
+        sender: 'system',
         type: 'tool_request',
         text: 'The model wants to call the following tool(s):',
         tool_calls: functionCalls,

@@ -14,7 +14,7 @@ import { MatButtonModule } from '@angular/material/button';
   styleUrl: './chat-message.component.css'
 })
 export class ChatMessageComponent {
-  @Input() message: Message | undefined;
+  @Input() message!: Message;
 
   constructor(private sanitizer: DomSanitizer, private chatService: ChatService) {}
 

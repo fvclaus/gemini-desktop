@@ -26,4 +26,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("mcp-server-status", (event, ...args) => callback(...args));
   },
   getMcpServers: () => ipcRenderer.invoke("get-mcp-servers"),
+  callMcpTool: (serverName, toolName, params) => ipcRenderer.invoke("call-mcp-tool", { serverName, toolName, params }),
 });
