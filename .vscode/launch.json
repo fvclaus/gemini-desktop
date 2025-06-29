@@ -4,16 +4,18 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
-            "name": "backend",
-            "type": "debugpy",
-            "justMyCode": false,
+            "name": "Debug Main Process",
+            "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/python_backend/mcp_flask_backend.py",
-            "console": "integratedTerminal",
+            "cwd": "${workspaceRoot}/mcp-gemini-desktop",
+            "runtimeExecutable": "${workspaceRoot}/mcp-gemini-desktop/node_modules/.bin/electron-vite",
+            "windows": {
+                "runtimeExecutable": "${workspaceRoot}/mcp-gemini-desktop/node_modules/.bin/electron-vite.cmd"
+            },
+            "runtimeArgs": ["--sourcemap"],
             "env": {
-                "FLASK_DEBUG": "1",
+                "REMOTE_DEBUGGING_PORT": "9222"
             }
         }
     ]

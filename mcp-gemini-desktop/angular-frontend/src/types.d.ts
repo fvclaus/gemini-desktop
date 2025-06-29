@@ -1,3 +1,5 @@
+import { McpServerState, McpServerStatus } from "../../src/shared/types";
+
 declare global {
 
   type ShowOpenDialogCanceledResponse = {
@@ -31,10 +33,11 @@ declare global {
       onWorkspaceSelected: (callback: (path: string | null) => void) => void;
       getSelectedWorkspace: () => Promise<string | null>;
       changeWorkspaceAndReload: () => Promise<string | null>;
-      getPythonPort: () => Promise<number>;
       showOpenDialog: (options: ShowOpenFileDialog | ShowOpenDirectoryDialog) => Promise<ShowOpenDialogCanceledResponse | ShowOpenDialogResponse>;
       readFileContent: (filePath: string) => Promise<string>;
       onApiKeyUpdate: (callback: (result: { success: boolean; message?: string }) => void) => void;
+      onMcpServerStatus: (callback: (servers: McpServerStatus[])=> void) => void;
+      getMcpServers: () => Promise<McpServerStatus[]>;
       // Add any other electronAPI methods that might be used by services
     }
   }

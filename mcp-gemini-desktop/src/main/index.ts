@@ -1,15 +1,133 @@
 import {app, BrowserWindow, ipcMain, dialog} from "electron";
 import path, { join } from "path";
-import fs from "fs/promises";
+import fs, { FileChangeInfo } from "fs/promises";
+import fsSync from "fs";
 import fetch from "node-fetch";
 // https://github.com/sindresorhus/electron-store/issues/289
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport  } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { Tool } from "@modelcontextprotocol/sdk/types";
+import { z } from "zod";
+import { McpServerState, McpServerStatus } from "../shared/types";
 import __Store from 'electron-store'
+
 export const Store = __Store.default || __Store
 
 console.log(Store);
 const store = new Store();
-let mainWindow!: BrowserWindow;
+let mainWindow: BrowserWindow | null;
 const pythonPort = 5001;
+
+// Zod schema for server definition
+const ServerDefinitionSchema = z.object({
+  command: z.string(),
+  args: z.array(z.string()),
+  env: z.record(z.string()).optional(),
+});
+
+// Zod schema for the entire mcpServers.json
+const McpServersConfigSchema = z.object({
+  mcpServers: z.record(ServerDefinitionSchema),
+}).strict();
+
+type McpServersConfig = z.infer<typeof McpServersConfigSchema>;
+type ServerDefinition = z.infer<typeof ServerDefinitionSchema>;
+
+const mcpServerStatuses = new Map<string, {status: McpServerStatus, client?: Client}>();
+let mcpConfigWatcher: fsSync.FSWatcher | null = null;
+
+function sendAllServerStatuses() {
+  if (mainWindow) {
+    const statuses = Array.from(mcpServerStatuses.values());
+    console.log(`[MCP] Sending ${statuses.length} server statuses to renderer.`);
+    mainWindow.webContents.send("mcp-server-status", statuses.map(s => ({...s.status})));
+  }
+}
+
+
+async function loadAndStartMcpServers(workspacePath: string) {
+  mcpServerStatuses.clear();
+  if (mcpConfigWatcher) {
+    mcpConfigWatcher.close();
+  }
+  const mcpConfigPath = path.join(workspacePath, "mcpServers.json");
+
+  for (const mcpServer of Array.from(mcpServerStatuses.values())) {
+    if (mcpServer.client) {
+      console.log(`[MCP] stopping ${mcpServer.status.identifier}`);
+      // TODO in paralllel
+      await mcpServer.client.close();
+    }
+  }
+
+  if (!fsSync.existsSync(mcpConfigPath)) {
+    return;
+  }
+
+  try {
+    mcpConfigWatcher = fsSync.watch(mcpConfigPath, {encoding: "utf-8"}, (event) => {
+      if (event === 'change') {
+        console.log('[MCP] mcpServers.json changed. Reloading...');
+        loadAndStartMcpServers(workspacePath);
+      }
+    });
+
+    const configContent = await fs.readFile(mcpConfigPath, "utf-8");
+    const rawConfig = JSON.parse(configContent);
+    const config = McpServersConfigSchema.parse(rawConfig);
+
+
+    if (config.mcpServers) {
+      for (const serverName in config.mcpServers) {
+        const serverDef = config.mcpServers[serverName];
+        
+        // Set initial state
+        mcpServerStatuses.set(serverName, {status: { identifier: serverName, state: McpServerState.STOPPED }});
+
+        const client = new Client({
+          name: serverName,
+          version: "0.0.1", // Or get from config if available
+        });
+
+        const transport = new StdioClientTransport({
+          command: serverDef.command,
+          args: serverDef.args
+        }
+            // serverDef.env,
+        );
+
+        // Update to STARTING
+        mcpServerStatuses.set(serverName, {status: { identifier: serverName, state: McpServerState.STARTING }});
+        sendAllServerStatuses();
+
+        client.connect(transport).then(async () => {
+          console.log(`[MCP] Server '${serverName}' connected successfully.`);
+          const toolResponse = await client.listTools();
+          const tools = [...toolResponse.tools];
+          tools.sort((t1, t2) => t1.name.localeCompare(t2.name));
+          mcpServerStatuses.set(serverName, {status: { identifier: serverName, state: McpServerState.STARTED, tools: toolResponse.tools }, client});
+          sendAllServerStatuses();
+        }).catch(error => {
+          console.error(`[MCP] Server '${serverName}' failed to connect:`, error);
+          mcpServerStatuses.set(serverName, {status: { identifier: serverName, state: McpServerState.ERROR, error: (error as Error).message }});
+          sendAllServerStatuses();
+        });
+      }
+    }
+  } catch (error) {
+    // TODO Fehler Meldung an Frontend propagieren
+    if (error instanceof z.ZodError) {
+      console.error(`[MCP] Invalid mcpServers.json format:`, error.errors);
+    }
+    else if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      console.log(`[MCP] mcpServers.json not found in workspace. No servers to start.`);
+    } else {
+      console.error(`[MCP] Error loading, parsing, or validating mcpServers.json:`, error);
+    }
+  }
+  sendAllServerStatuses(); // Send initial state even if file not found or empty
+}
+
 
 function createWindow() {
   console.log("[createWindow] Attempting to create main window...");
@@ -65,7 +183,7 @@ function createWindow() {
       console.error("[createWindow] Error loading content:", err);
       dialog.showErrorBox(
         "Loading Error",
-        `Failed to load application content: ${err.message}`
+        `Failed to load application content: ${(err as Error).message}`
       );
       app.quit();
     }
@@ -122,11 +240,6 @@ app.on("quit", () => {
   console.log("[app.quit] App quitting.");
 });
 
-ipcMain.handle("get-python-port", async () => {
-  return pythonPort;
-});
-
-
 
 ipcMain.handle("get-initial-workspace", async () => {
   console.log("[get-initial-workspace] Renderer requested initial workspace path.");
@@ -136,6 +249,7 @@ ipcMain.handle("get-initial-workspace", async () => {
       const stats = await fs.stat(currentWorkspace);
       if (stats.isDirectory()) {
         console.log(`[get-initial-workspace] Returning stored workspace: ${currentWorkspace}`);
+        loadAndStartMcpServers(currentWorkspace);
         return currentWorkspace;
       } else {
         console.log(`[get-initial-workspace] Stored workspace path '${currentWorkspace}' is not a directory. Clearing and returning null.`);
@@ -143,7 +257,7 @@ ipcMain.handle("get-initial-workspace", async () => {
         return null;
       }
     } catch (error) {
-      console.warn(`[get-initial-workspace] Error verifying stored workspace '${currentWorkspace}'. Clearing and returning null:`, error.message);
+      console.warn(`[get-initial-workspace] Error verifying stored workspace '${currentWorkspace}'. Clearing and returning null:`, (error as Error).message);
       store.delete("lastOpenedWorkspace");
       return null;
     }
@@ -170,7 +284,7 @@ ipcMain.handle("change-workspace-and-reload", async () => {
   // Let's make it orchestrate:
 
   const result = await dialog.showOpenDialog(mainWindow, {
-    selectionType: "directory",
+    properties: ["openDirectory"],
     title: "Select New Workspace Folder",
   });
 
@@ -179,19 +293,24 @@ ipcMain.handle("change-workspace-and-reload", async () => {
     return store.get("lastOpenedWorkspace");
   }
 
-  const newWorkspacePath = result.filePath;
+  const newWorkspacePath = result.filePaths[0];
   const oldWorkspacePath = store.get("lastOpenedWorkspace");
 
   if (newWorkspacePath !== oldWorkspacePath) {
     store.set("lastOpenedWorkspace", newWorkspacePath);
     console.log(`[change-workspace-and-reload] Workspace changed to: ${newWorkspacePath}. Reloading app.`);
     mainWindow.webContents.send("workspace-selected", newWorkspacePath); // Inform before reload
+    loadAndStartMcpServers(newWorkspacePath);
     mainWindow.reload();
     return newWorkspacePath;
   } else {
     console.log(`[change-workspace-and-reload] Selected workspace is the same as current. No change.`);
     return oldWorkspacePath;
   }
+});
+
+ipcMain.handle("get-mcp-servers", async () => {
+  return Array.from(mcpServerStatuses.values());
 });
 
 
@@ -208,7 +327,7 @@ ipcMain.handle("read-file-content", async (event, filePath) => {
     return content;
   } catch (error) {
     console.error(`[read-file-content] Error reading file ${filePath}:`, error);
-    throw new Error(`Failed to read file: ${error.message}`);
+    throw new Error(`Failed to read file: ${(error as Error).message}`);
   }
 });
 
@@ -221,29 +340,27 @@ ipcMain.handle("show-open-dialog", async (event, options) => {
     throw new Error("Invalid options provided for dialog.");
   }
 
-  const { title, filters, selectionType = 'file' } = options; // Default to 'file'
+  const { title, filters, selectionType = 'file' } = options;
 
   if (typeof title !== 'string' || !title) {
     throw new Error("A valid title must be provided for the dialog.");
   }
 
-  if (selectionType !== 'file' && selectionType !== 'directory') {
+  const properties: ('openFile' | 'openDirectory')[] = [];
+  if (selectionType === 'file') {
+    properties.push('openFile');
+  } else if (selectionType === 'directory') {
+    properties.push('openDirectory');
+  } else {
     throw new Error("Invalid selectionType. Must be 'file' or 'directory'.");
   }
 
-  const dialogProperties = [];
-  if (selectionType === 'file') {
-    dialogProperties.push('openFile');
-  } else { // 'directory'
-    dialogProperties.push('openDirectory');
-  }
-
-  const dialogOptions = {
+  const dialogOptions: Electron.OpenDialogOptions = {
     title: title,
-    properties: dialogProperties,
+    properties: properties,
   };
 
-  if (selectionType === 'file') {
+  if (selectionType === 'file' && filters) {
     if (!Array.isArray(filters) || filters.some(f => typeof f.name !== 'string' || !Array.isArray(f.extensions))) {
       throw new Error("Valid filters (name and extensions array) must be provided for file selection.");
     }
@@ -260,7 +377,7 @@ ipcMain.handle("show-open-dialog", async (event, options) => {
       return { canceled: false, path: selectedPath };
     }
   } catch (error) {
-    throw new Error(`Failed to show open file dialog: ${error.message}`);
+    throw new Error(`Failed to show open file dialog: ${(error as Error).message}`);
   }
 });
 

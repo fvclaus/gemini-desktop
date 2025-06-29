@@ -4,8 +4,10 @@
   --sidebar-width: 280px;
 
   /* Semantic status colors for chips - can be overridden by component styles if needed */
-  --status-connected: #4CAF50;
-  --status-error: #F44336;
+  --status-STARTED: #4CAF50;
+  --status-ERROR: #F44336;
+  --status-STARTING: yellow;
+  --status-STOPPED: grey;
 }
 
 html, body {

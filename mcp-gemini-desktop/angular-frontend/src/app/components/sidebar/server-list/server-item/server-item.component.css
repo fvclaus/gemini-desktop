@@ -16,14 +16,21 @@
   margin-left: 8px;
 }
 
-.status-circle.connected {
-  background-color: var(--status-connected);
+.status-circle.STARTED {
+  background-color: var(--status-STARTED);
 }
 
-.status-circle.error {
-  background-color: var(--status-error);
+.status-circle.ERROR {
+  background-color: var(--status-ERROR);
 }
 
+.status-circle.STOPPED {
+  background-color: var(--status-STOPPED);
+}
+
+.status-circle.STARTING {
+  background-color: var(--status-STARTING);
+}
 .tools-title-material {
   font-size: 0.875rem; /* Material caption size */
   /* color: rgba(0,0,0,0.54); /* Let Material theme handle text color */
@@ -40,8 +47,12 @@
 }
 */
 .server-item-card {
-  border: 1px solid rgba(0,0,0,0.12);
-  border-radius: 8px;
+  /* border: 1px solid rgba(0,0,0,0.12); */
+  /* border-radius: 8px; */
   margin-bottom: 16px;
   padding: 8px;
+}
+
+.tool-chip {
+  cursor: pointer;
 }

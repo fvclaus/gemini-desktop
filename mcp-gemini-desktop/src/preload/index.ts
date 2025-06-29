@@ -1,7 +1,6 @@
 import {contextBridge, ipcRenderer} from "electron";
 
 contextBridge.exposeInMainWorld("electronAPI", {
-  getPythonPort: () => ipcRenderer.invoke("get-python-port"),
   readFileContent: (filePath) => ipcRenderer.invoke("read-file-content", filePath),
   showOpenDialog: (options) => ipcRenderer.invoke("show-open-dialog", options),
 
@@ -19,11 +18,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("api-key-update-status", (event, ...args) =>
       callback(...args)
     ),
-  // Model switching APIs (ensure these are still needed and correctly exposed)
-  listModels: () => ipcRenderer.invoke("list-models"),
-  getModel: () => ipcRenderer.invoke("get-model"),
   setModel: (modelName) => ipcRenderer.invoke("set-model", modelName),
   onModelUpdateStatus: (callback) =>
     ipcRenderer.on("model-update-status", (event, ...args) => callback(...args)),
 
+  onMcpServerStatus: (callback) => {
+    ipcRenderer.on("mcp-server-status", (event, ...args) => callback(...args));
+  },
+  getMcpServers: () => ipcRenderer.invoke("get-mcp-servers"),
 });

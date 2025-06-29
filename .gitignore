@@ -5,3 +5,4 @@ python_backend/.env
 python_backend/uv.lock
 mcp-gemini-desktop/dist/
 node_modules/
+out/

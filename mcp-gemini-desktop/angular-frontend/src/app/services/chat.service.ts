@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import katex from 'katex';
 import { GoogleGenAI, Content, Part, FunctionCall, GenerateContentResponse } from '@google/genai';
 import { SettingsService } from './settings.service';
+import { McpServerStatus } from '../../../../src/shared/types';
 
 // Electron API types are now expected to be globally available via types.d.ts
 
@@ -19,15 +20,6 @@ export interface Message {
   tool_calls?: any[]; // For tool_request type
 }
 
-export interface Server { // Ensure Server interface is also exported if used elsewhere
-  identifier: string;
-  display_name: string;
-  status: 'connected' | 'error' | 'connecting' | 'disconnected';
-  tools?: string[];
-  path?: string; // For .py servers
-  command?: string; // For JSON-defined servers
-  args?: string[];  // For JSON-defined servers
-}
 
 @Injectable({
   providedIn: 'root'
@@ -41,8 +33,8 @@ export class ChatService {
   private messagesSubject = new BehaviorSubject<Message[]>([]);
   messages$: Observable<Message[]> = this.messagesSubject.asObservable();
 
-  private serversSubject = new BehaviorSubject<Server[]>([]);
-  servers$: Observable<Server[]> = this.serversSubject.asObservable();
+  private mcpServersSubject = new BehaviorSubject<McpServerStatus[]>([]);
+  mcpServers$: Observable<McpServerStatus[]> = this.mcpServersSubject.asObservable();
 
   private backendConnectionStatusSubject = new BehaviorSubject<'connected' | 'disconnected' | 'error'>('disconnected');
   backendConnectionStatus$: Observable<'connected' | 'disconnected' | 'error'> = this.backendConnectionStatusSubject.asObservable();
@@ -54,6 +46,20 @@ export class ChatService {
   ) {
     this.apiKey = this.settingsService.getApiKey();
     this.initializeApp();
+
+    window.electronAPI.onMcpServerStatus((statuses) => {
+      this.ngZone.run(() => {
+        console.log('MCP servers changed', statuses);
+        this.mcpServersSubject.next(statuses);
+      });
+    });
+
+    window.electronAPI.getMcpServers().then(statuses => {
+        this.ngZone.run(() => {
+            console.log("Received mcp servers on startup", statuses);
+            this.mcpServersSubject.next(statuses);
+        });
+    });
   }
 
   private async initializeApp(): Promise<void> {
