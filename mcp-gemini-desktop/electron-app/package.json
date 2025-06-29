@@ -1,14 +1,16 @@
 {
-  "name": "mcp-gemini-desktop",
-  "version": "0.1.0",
-  "description": "Desktop chat app for Gemini with MCP integration",
+  "name": "electron-app",
+  "version": "1.0.0",
+  "description": "A minimal Electron application with TypeScript",
   "main": "./out/main/index.js",
+  "author": "example.com",
+  "homepage": "https://electron-vite.org",
   "scripts": {
-    "watch": "electron . --inspect",
-    "dist": "electron-builder",
-    "ng:serve": "cd angular-frontend && ng serve",
-    "electron:dev": "NODE_ENV=development electron .",
+    "format": "prettier --write .",
     "lint": "eslint --cache .",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
@@ -18,24 +20,12 @@
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux"
   },
-  "keywords": [
-    "Electron",
-    "Gemini",
-    "MCP",
-    "Chat"
-  ],
-  "author": "Your Name",
-  "license": "MIT",
-  "devDependencies": {
+  "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
     "electron-updater": "^6.3.9"
   },
-  "dependencies": {
-    "electron-store": "^10.0.1",
-    "katex": "^0.16.11",
-    "marked": "^13.0.2",
-    "node-fetch": "^2.7.0",
+  "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",

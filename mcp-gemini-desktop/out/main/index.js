@@ -1,32 +1,28 @@
-// main.js
-import {app, BrowserWindow, ipcMain, dialog} from "electron";
-import path from "path";
-import fs from "fs/promises";
-import fetch from "node-fetch";
-import Store from "electron-store";
-
-// For ESM __dirname equivalent
-import { fileURLToPath } from "url";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const electron = require("electron");
+const path = require("path");
+const fs = require("fs/promises");
+const __Store = require("electron-store");
+const Store = __Store.default || __Store;
+console.log(Store);
 const store = new Store();
 let mainWindow;
 const pythonPort = 5001;
-
 function createWindow() {
   console.log("[createWindow] Attempting to create main window...");
-  mainWindow = new BrowserWindow({
+  mainWindow = new electron.BrowserWindow({
     width: 1200,
     height: 800,
-    show: false, // Initially hide the window
+    show: false,
+    // Initially hide the window
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
-      nodeIntegration: false,
+      nodeIntegration: false
     },
     titleBarStyle: "hidden",
-    trafficLightPosition: {x: 15, y: 15},
+    trafficLightPosition: { x: 15, y: 15 },
     minWidth: 800,
     minHeight: 600,
     title: "GemCP Chat",
@@ -34,15 +30,14 @@ function createWindow() {
     icon: path.join(
       __dirname,
       "assets",
-      app.isPackaged ? "icon.png" : "icon.png"
-    ), // Optional: set icon for window itself
+      electron.app.isPackaged ? "icon.png" : "icon.png"
+    )
+    // Optional: set icon for window itself
   });
   console.log("[createWindow] BrowserWindow created.");
-
   async function loadContent() {
-    const isDev = process.env.NODE_ENV === 'development';
+    const isDev = process.env.NODE_ENV === "development";
     let loadPromise;
-
     if (isDev) {
       console.log("[createWindow] Development mode: Attempting to load URL http://localhost:4200");
       loadPromise = mainWindow.loadURL("http://localhost:4200");
@@ -51,85 +46,59 @@ function createWindow() {
       console.log(`[createWindow] Production mode: Attempting to load file: ${indexPath}`);
       loadPromise = mainWindow.loadFile(indexPath);
     }
-
     try {
       await loadPromise;
       console.log("[createWindow] Content loaded successfully.");
-      mainWindow.show(); // Show window after content is loaded
+      mainWindow.maximize();
+      mainWindow.show();
       console.log("[createWindow] mainWindow.show() called after content load.");
-      // Initial workspace path is now fetched by the renderer via IPC.
-
-      if (isDev || !app.isPackaged) {
+      if (isDev || !electron.app.isPackaged) {
         mainWindow.webContents.openDevTools();
       }
     } catch (err) {
       console.error("[createWindow] Error loading content:", err);
-      dialog.showErrorBox(
+      electron.dialog.showErrorBox(
         "Loading Error",
         `Failed to load application content: ${err.message}`
       );
-      app.quit();
+      electron.app.quit();
     }
   }
-
   loadContent();
-
-
   mainWindow.on("closed", () => {
     console.log("[createWindow] Main window closed.");
     mainWindow = null;
   });
-
-  // mainWindow.on("ready-to-show", () => {
-  //   // This is now handled after content load and workspace selection
-  //   // console.log("[createWindow] Main window ready-to-show.");
-  //   // mainWindow.show();
-  //   // console.log("[createWindow] mainWindow.show() called after ready-to-show.");
-  // });
-
   mainWindow.webContents.on(
     "did-fail-load",
     (event, errorCode, errorDescription, validatedURL) => {
       console.error(
         `[createWindow] Failed to load URL: ${validatedURL}, Error Code: ${errorCode}, Description: ${errorDescription}`
       );
-      // Error handling is now more integrated into the loading promise
-      // dialog.showErrorBox(
-      //   "Load Failed",
-      //   `Failed to load content: ${errorDescription}`
-      // );
     }
   );
 }
-
-app.whenReady().then(() => {
+electron.app.whenReady().then(() => {
   console.log("[app.whenReady] App ready. Calling createWindow...");
   createWindow();
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+  electron.app.on("activate", () => {
+    if (electron.BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
 });
-
-app.on("window-all-closed", () => {
+electron.app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
-    app.quit();
+    electron.app.quit();
   }
 });
-
-app.on("quit", () => {
+electron.app.on("quit", () => {
   console.log("[app.quit] App quitting.");
 });
-
-ipcMain.handle("get-python-port", async () => {
+electron.ipcMain.handle("get-python-port", async () => {
   return pythonPort;
 });
-
-
-
-ipcMain.handle("get-initial-workspace", async () => {
+electron.ipcMain.handle("get-initial-workspace", async () => {
   console.log("[get-initial-workspace] Renderer requested initial workspace path.");
   const currentWorkspace = store.get("lastOpenedWorkspace");
   if (currentWorkspace) {
@@ -153,40 +122,26 @@ ipcMain.handle("get-initial-workspace", async () => {
     return null;
   }
 });
-
-// This specific "change-workspace" might involve more than just opening a dialog,
-// like reloading the app, so we keep it distinct.
-// The Angular app will call this, which in turn uses `select-workspace-dialog`
-// and then reloads.
-ipcMain.handle("change-workspace-and-reload", async () => {
+electron.ipcMain.handle("change-workspace-and-reload", async () => {
   console.log("[change-workspace-and-reload] User requested to change workspace.");
   if (!mainWindow) {
     console.error("[change-workspace-and-reload] mainWindow is not available.");
     return null;
   }
-  // We can reuse the select-workspace-dialog logic here or call it directly
-  // For now, let's keep it simple and assume the renderer calls select-workspace-dialog first,
-  // then if a path is returned, it calls this to confirm and reload.
-  // Or, this function itself can orchestrate.
-  // Let's make it orchestrate:
-
-  const result = await dialog.showOpenDialog(mainWindow, {
+  const result = await electron.dialog.showOpenDialog(mainWindow, {
     selectionType: "directory",
-    title: "Select New Workspace Folder",
+    title: "Select New Workspace Folder"
   });
-
   if (result.canceled) {
     console.log("[change-workspace-and-reload] User canceled workspace selection.");
     return store.get("lastOpenedWorkspace");
   }
-
   const newWorkspacePath = result.filePath;
   const oldWorkspacePath = store.get("lastOpenedWorkspace");
-
   if (newWorkspacePath !== oldWorkspacePath) {
     store.set("lastOpenedWorkspace", newWorkspacePath);
     console.log(`[change-workspace-and-reload] Workspace changed to: ${newWorkspacePath}. Reloading app.`);
-    mainWindow.webContents.send("workspace-selected", newWorkspacePath); // Inform before reload
+    mainWindow.webContents.send("workspace-selected", newWorkspacePath);
     mainWindow.reload();
     return newWorkspacePath;
   } else {
@@ -194,16 +149,11 @@ ipcMain.handle("change-workspace-and-reload", async () => {
     return oldWorkspacePath;
   }
 });
-
-
-// Handler to read file content
-ipcMain.handle("read-file-content", async (event, filePath) => {
-  if (!filePath || typeof filePath !== 'string') {
+electron.ipcMain.handle("read-file-content", async (event, filePath) => {
+  if (!filePath || typeof filePath !== "string") {
     throw new Error("Invalid file path provided.");
   }
   try {
-    // Basic security check: Ensure the path is within expected directories if needed
-    // For simplicity now, we just read the path given. Add validation if required.
     console.log(`[read-file-content] Reading file: ${filePath}`);
     const content = await fs.readFile(filePath, "utf-8");
     return content;
@@ -212,48 +162,38 @@ ipcMain.handle("read-file-content", async (event, filePath) => {
     throw new Error(`Failed to read file: ${error.message}`);
   }
 });
-
-
-ipcMain.handle("show-open-dialog", async (event, options) => {
+electron.ipcMain.handle("show-open-dialog", async (event, options) => {
   if (!mainWindow) {
     throw new Error("Main window is not available to show dialog.");
   }
-  if (!options || typeof options !== 'object') {
+  if (!options || typeof options !== "object") {
     throw new Error("Invalid options provided for dialog.");
   }
-
-  const { title, filters, selectionType = 'file' } = options; // Default to 'file'
-
-  if (typeof title !== 'string' || !title) {
+  const { title, filters, selectionType = "file" } = options;
+  if (typeof title !== "string" || !title) {
     throw new Error("A valid title must be provided for the dialog.");
   }
-
-  if (selectionType !== 'file' && selectionType !== 'directory') {
+  if (selectionType !== "file" && selectionType !== "directory") {
     throw new Error("Invalid selectionType. Must be 'file' or 'directory'.");
   }
-
   const dialogProperties = [];
-  if (selectionType === 'file') {
-    dialogProperties.push('openFile');
-  } else { // 'directory'
-    dialogProperties.push('openDirectory');
+  if (selectionType === "file") {
+    dialogProperties.push("openFile");
+  } else {
+    dialogProperties.push("openDirectory");
   }
-
   const dialogOptions = {
-    title: title,
-    properties: dialogProperties,
+    title,
+    properties: dialogProperties
   };
-
-  if (selectionType === 'file') {
-    if (!Array.isArray(filters) || filters.some(f => typeof f.name !== 'string' || !Array.isArray(f.extensions))) {
+  if (selectionType === "file") {
+    if (!Array.isArray(filters) || filters.some((f) => typeof f.name !== "string" || !Array.isArray(f.extensions))) {
       throw new Error("Valid filters (name and extensions array) must be provided for file selection.");
     }
     dialogOptions.filters = filters;
   }
-
   try {
-    const result = await dialog.showOpenDialog(mainWindow, dialogOptions);
-
+    const result = await electron.dialog.showOpenDialog(mainWindow, dialogOptions);
     if (result.canceled || result.filePaths.length === 0) {
       return { canceled: true, path: null };
     } else {
@@ -264,5 +204,4 @@ ipcMain.handle("show-open-dialog", async (event, options) => {
     throw new Error(`Failed to show open file dialog: ${error.message}`);
   }
 });
-
-
+exports.Store = Store;
