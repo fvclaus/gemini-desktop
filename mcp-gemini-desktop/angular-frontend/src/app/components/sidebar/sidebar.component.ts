@@ -9,6 +9,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ModalService } from '../../services/modal.service';
+import { ChatHistoryComponent } from '../chat-history/chat-history.component';
 
 @Component({
   selector: 'app-sidebar',
@@ -19,7 +20,8 @@ import { ModalService } from '../../services/modal.service';
     ServerListComponent,
     MatToolbarModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
+    ChatHistoryComponent
   ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.css'
@@ -32,5 +34,10 @@ export class SidebarComponent {
 
   setTab(tab: 'new' | 'servers'): void {
     this.activeTab = tab;
+  }
+
+  newChat(): void {
+    this.chatService.startNewSession();
+    this.setTab('new');
   }
 }

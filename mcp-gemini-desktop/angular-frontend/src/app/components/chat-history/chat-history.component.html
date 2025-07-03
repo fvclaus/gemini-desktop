@@ -1,0 +1,12 @@
+<div class="chat-history-container">
+  <h2>Chat History</h2>
+  <mat-list>
+    <mat-list-item *ngFor="let session of sessions" (click)="loadSession(session.id)">
+      <div mat-line>{{ getTitle(session) }}</div>
+      <div mat-line>
+        <small>{{ session.startTime | date:'short' }}</small>
+      </div>
+    </mat-list-item>
+  </mat-list>
+  <p *ngIf="sessions.length === 0">No chat history found.</p>
+</div>

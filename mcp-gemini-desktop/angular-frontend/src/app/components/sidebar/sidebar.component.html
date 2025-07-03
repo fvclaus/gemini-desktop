@@ -1,6 +1,6 @@
 <div class="sidebar-content-wrapper">
     <div class="tab-header">
-        <button mat-icon-button (click)="setTab('new')" [class.active]="activeTab === 'new'">
+        <button mat-icon-button (click)="newChat()" [class.active]="activeTab === 'new'">
             <mat-icon>add</mat-icon>
         </button>
         <button mat-icon-button (click)="setTab('servers')" [class.active]="activeTab === 'servers'">
@@ -9,7 +9,9 @@
     </div>
 
     <div [ngSwitch]="activeTab">
-        <div *ngSwitchCase="'new'"></div>
+        <div *ngSwitchCase="'new'">
+            <app-chat-history></app-chat-history>
+        </div>
 
         <div *ngSwitchCase="'servers'">
             <div class="sidebar-footer-material done-button-container">

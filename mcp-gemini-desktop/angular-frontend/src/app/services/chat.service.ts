@@ -5,8 +5,17 @@ import katex from 'katex';
 import { GoogleGenAI, Content, Part, FunctionCall, GenerateContentResponse } from '@google/genai';
 import { SettingsService } from './settings.service';
 import { McpServerStatus } from '../../../../src/shared/types';
+import { ChatSessionHistoryService } from './chat-session-history.service';
+import { ChatSession } from './chat-session.interface';
 
 // Electron API types are now expected to be globally available via types.d.ts
+
+export interface UserMessage {
+  id: string;
+  text: string;
+  sender: 'user';
+  timestamp: Date
+}
 
 // Define and export Message interface here
 export interface Message {
@@ -29,6 +38,7 @@ export class ChatService {
   private apiKey: string | null = null;
   private modelName: string = 'gemini-2.5-pro-preview-05-06'; // Default model
   private chatHistory: Content[] = [];
+  private activeSession: ChatSession | null = null;
 
   private messagesSubject = new BehaviorSubject<Message[]>([]);
   messages$: Observable<Message[]> = this.messagesSubject.asObservable();
@@ -36,13 +46,11 @@ export class ChatService {
   private mcpServersSubject = new BehaviorSubject<McpServerStatus[]>([]);
   mcpServers$: Observable<McpServerStatus[]> = this.mcpServersSubject.asObservable();
 
-  private backendConnectionStatusSubject = new BehaviorSubject<'connected' | 'disconnected' | 'error'>('disconnected');
-  backendConnectionStatus$: Observable<'connected' | 'disconnected' | 'error'> = this.backendConnectionStatusSubject.asObservable();
-
 
   constructor(
     private ngZone: NgZone,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    private chatHistoryService: ChatSessionHistoryService
   ) {
     this.apiKey = this.settingsService.getApiKey();
     this.initializeApp();
@@ -65,7 +73,6 @@ export class ChatService {
   private async initializeApp(): Promise<void> {
     if (!this.apiKey) {
       console.error('API key is not set.');
-      this.backendConnectionStatusSubject.next('error');
       this.addMessageHelper({
         id: 'init-error',
         text: 'API Key is not configured. Please set it in the settings.',
@@ -78,21 +85,10 @@ export class ChatService {
 
     try {
       this.genAI = new GoogleGenAI({apiKey: this.apiKey});
-      this.backendConnectionStatusSubject.next('connected');
       console.log('Gemini client initialized successfully.');
 
-      if (this.messagesSubject.getValue().length === 0) {
-        this.addMessageHelper({
-          id: 'init-welcome',
-          text: 'Welcome to GemCP Chat! I am ready to chat.',
-          sender: 'ai',
-          type: 'welcome',
-          timestamp: new Date()
-        });
-      }
     } catch (error) {
       console.error('Error initializing Gemini client:', error);
-      this.backendConnectionStatusSubject.next('error');
       this.addMessageHelper({
         id: 'init-error',
         text: 'Error initializing Gemini. Please check your API key and network connection.',
@@ -120,7 +116,17 @@ export class ChatService {
         message.id = `${message.sender}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       }
       console.log('Added new message', message);
-      this.messagesSubject.next([...currentMessages, message]);
+      const newMessages = [...currentMessages, message];
+      this.messagesSubject.next(newMessages);
+
+      if (!this.activeSession) {
+        // TODO Improve this Typecast
+        const newSession = this.chatHistoryService.createSession(message as UserMessage);
+        this.activeSession = newSession;
+      } else {
+        this.activeSession.messages.push(message);
+        this.chatHistoryService.updateSession(this.activeSession);
+      }
     });
   }
 
@@ -167,6 +173,7 @@ export class ChatService {
   async sendMessage(messageText: string): Promise<void> {
     if (!messageText.trim()) return;
 
+    // TODO Prevent submit and remove code
     if (!this.genAI) {
       this.addMessageHelper({
         text: 'Error: Chat session not initialized. Please check your API key.',
@@ -334,6 +341,23 @@ export class ChatService {
     }
   }
 
+  public startNewSession(): void {
+    this.chatHistory = [];
+    this.messagesSubject.next([]);
+  }
+
+  public loadSession(sessionId: string): void {
+    const session = this.chatHistoryService.getSession(sessionId);
+    if (session) {
+      this.activeSession = session;
+      this.chatHistory = session.messages.map(m => ({
+        role: m.sender === 'user' ? 'user' : 'model',
+        parts: [{ text: m.text }]
+      }));
+      this.messagesSubject.next(session.messages);
+    }
+  }
+
   public setModel(modelName: string): void {
     this.modelName = modelName;
     this.addMessageHelper({
@@ -349,7 +373,6 @@ export class ChatService {
 
   private cleanup(): void {
     this.genAI = null;
-    this.backendConnectionStatusSubject.next('disconnected');
   }
 
   ngOnDestroy() {
