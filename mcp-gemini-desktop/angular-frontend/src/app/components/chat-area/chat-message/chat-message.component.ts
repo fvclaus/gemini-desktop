@@ -5,11 +5,12 @@ import { ChatService, Message } from '../../../services/chat.service'; // Import
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { ChatMessageToolRequestComponent } from '../chat-message-tool-request/chat-message-tool-request.component';
 
 @Component({
   selector: 'app-chat-message',
   standalone: true,
-  imports: [CommonModule, NgClass, NgIf, MatCardModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, NgClass, NgIf, MatCardModule, MatIconModule, MatButtonModule, ChatMessageToolRequestComponent],
   templateUrl: './chat-message.component.html',
   styleUrl: './chat-message.component.css'
 })
@@ -19,30 +20,34 @@ export class ChatMessageComponent {
   constructor(private sanitizer: DomSanitizer, private chatService: ChatService) {}
 
   isSystemMessage(): boolean {
-    return this.message?.sender === 'system';
+    return this.message.sender === 'system';
   }
 
   isToolStatusMessage(): boolean {
-    return this.message?.type === 'tool_result';
+    return this.message.sender === 'system' &&  this.message.type === 'tool_result';
   }
 
   isDetailsOpen(): boolean {
-    return this.isToolStatusMessage() || this.message?.type === 'error' || this.message?.type === 'tool_request';
+    return this.isToolStatusMessage() || this.isErrorMessage() || 
+      (this.message.sender === 'system' && this.message.type == 'tool_request');
+  }
+
+  private isErrorMessage(): boolean {
+    return this.message.sender === 'system' && this.message.type === 'error';
   }
 
   getSummaryColor(): string | null {
-    if (this.message?.type === 'tool_result') {
-      const isError = this.message.details?.toLowerCase().includes('error');
-      return isError ? 'var(--status-error)' : null;
-    }
-    if (this.message?.type === 'error') {
+    if (this.isErrorMessage()) {
       return 'var(--status-error)';
     }
     return null;
   }
 
   getSummaryIconName(): string {
-    if (!this.message || !this.message.type) return 'info_outline';
+
+    if (this.message.sender === 'user') {
+      return 'info_outline';
+    }
 
     switch (this.message.type) {
       case 'tool_request':
@@ -53,14 +58,16 @@ export class ChatMessageComponent {
       case 'error':
         return 'warning_amber';
       case 'log':
-      case 'welcome':
       default:
         return 'info_outline';
     }
   }
 
   getSummaryText(): string {
-    if (!this.message) return '';
+
+    if (this.message.sender === 'user') {
+      return this.message.text;
+    }
 
     switch (this.message.type) {
       case 'tool_request':
@@ -69,31 +76,32 @@ export class ChatMessageComponent {
         return `Tool Result: ${this.message.text}`;
       case 'error':
         return 'System Error';
-      case 'welcome':
-        return 'Welcome';
       case 'log':
         return 'System Log';
+      case 'loading': 
+        return '...';
       default:
         return this.message.text || 'System Message';
     }
   }
 
   getDetailsContent(): string {
-    if (!this.message) return '';
-    if (this.message.type === 'tool_result' || this.message.type === 'error') {
-      return this.message.details || this.message.text;
-    }
-    return this.message.text;
+    // TODO
+    return (this.message as any).text;
   }
 
   getFormattedContent(): SafeHtml {
-    if (!this.message || this.message.sender === 'system') {
+    if (this.message.sender === 'system') {
       // System messages are handled by summary/details, or have no formatted content part
       return '';
     }
 
+    if (this.message.sender === 'ai' && this.message.type === 'loading') {
+      return '...';
+    }
+
     // If htmlContent is pre-rendered by the service, use it directly
-    if (this.message.htmlContent) {
+    if (this.message.sender === 'ai' && this.message.type === 'text') {
       // Sanitize it once more, just in case, though service should also sanitize.
       return this.sanitizer.sanitize(SecurityContext.HTML, this.message.htmlContent) || '';
     }
@@ -105,13 +113,4 @@ export class ChatMessageComponent {
     return sanitizedText || '';
   }
 
-  onToolResponse(approved: boolean, toolCall: any): void {
-    if (this.message) {
-      this.chatService.sendToolResponse(approved, toolCall);
-      // Visually disable the buttons after an action is taken
-      if (this.message.tool_calls) {
-        this.message.tool_calls = this.message.tool_calls.filter(tc => tc !== toolCall);
-      }
-    }
-  }
 }

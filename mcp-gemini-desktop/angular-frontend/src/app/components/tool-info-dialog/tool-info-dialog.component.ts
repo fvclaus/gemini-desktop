@@ -85,12 +85,7 @@ export class ToolInfoDialogComponent {
   }
 
   async callTool(serverName: string, toolName: string, params: any): Promise<any> {
-    if (window.electronAPI) {
-      return await window.electronAPI.callMcpTool(serverName, toolName, params);
-    } else {
-      console.error('electronAPI is not available');
-      return Promise.reject('electronAPI is not available');
-    }
+    return await window.electronAPI.callMcpTool(serverName, toolName, params);
   }
 
   onClose(): void {

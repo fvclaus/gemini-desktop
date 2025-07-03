@@ -17,24 +17,65 @@ export interface UserMessage {
   timestamp: Date
 }
 
-// Define and export Message interface here
-export interface Message {
-  id?: string;
-  text: string;
-  sender: 'user' | 'ai' | 'system';
-  type?: 'welcome' | 'loading' | 'error' | 'tool_request' | 'tool_result' | 'log' | 'text';
-  details?: any; // Can be string or object for tool calls
-  htmlContent?: string;
+export interface LoadingMessage {
+  id: string;
+  sender: 'ai';
+  type: 'loading';
   timestamp: Date;
-  tool_calls?: any[]; // For tool_request type
 }
+
+export interface AiMessage {
+  id: string,
+  sender: 'ai',
+  type: 'text',
+  text: string,
+  htmlContent: string,
+  timestamp: Date,
+}
+
+export interface SystemErrorMessage {
+  id: string,
+  text: string,
+  sender: 'system',
+  type: 'error',
+  details?: string,
+  timestamp: Date,
+}
+
+export interface SystemLogMessage {
+  id: string,
+  text: string,
+  sender: 'system',
+  type: 'log',
+  timestamp: Date,
+}
+
+export interface ToolRequestMessage {
+  id: string;
+  sender: 'system',
+  type: 'tool_request',
+  text: string,
+  tool_calls: any[],
+  timestamp: Date,
+}
+
+export interface ToolResultMessage {
+  id: string;
+  sender: 'system',
+  type: 'tool_result',
+  text: string,
+  details: string,
+  timestamp: Date,
+}
+
+export type Message = UserMessage | LoadingMessage | SystemErrorMessage | SystemLogMessage | AiMessage | ToolRequestMessage | ToolResultMessage;
 
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChatService {
-  private genAI: GoogleGenAI | null = null;
+  private genAI!: GoogleGenAI;
   private apiKey: string | null = null;
   private modelName: string = 'gemini-2.5-pro-preview-05-06'; // Default model
   private chatHistory: Content[] = [];
@@ -97,7 +138,6 @@ export class ChatService {
         details: error instanceof Error ? error.message : String(error),
         timestamp: new Date()
       });
-      this.cleanup();
     }
   }
 
@@ -123,7 +163,7 @@ export class ChatService {
         // TODO Improve this Typecast
         const newSession = this.chatHistoryService.createSession(message as UserMessage);
         this.activeSession = newSession;
-      } else {
+      } else if (!(message.sender === 'ai' && message.type === 'loading')) {
         this.activeSession.messages.push(message);
         this.chatHistoryService.updateSession(this.activeSession);
       }
@@ -176,6 +216,7 @@ export class ChatService {
     // TODO Prevent submit and remove code
     if (!this.genAI) {
       this.addMessageHelper({
+        id: 'init-error',
         text: 'Error: Chat session not initialized. Please check your API key.',
         sender: 'system',
         type: 'error',
@@ -196,7 +237,6 @@ export class ChatService {
     const loadingMessageId = `ai-loading-${Date.now()}`;
     this.addMessageHelper({
       id: loadingMessageId,
-      text: '...',
       sender: 'ai',
       type: 'loading',
       timestamp: new Date()
@@ -222,6 +262,7 @@ export class ChatService {
       console.error('Error sending message to Gemini:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.addMessageHelper({
+        id: this.generateId(),
         text: `Error: ${errorMessage}`,
         sender: 'system',
         type: 'error',
@@ -229,6 +270,10 @@ export class ChatService {
         timestamp: new Date()
       }, loadingMessageId);
     }
+  }
+
+  private generateId(): string {
+    return `${Date.now()}`;
   }
 
   private handleGeminiResponse(loadingMessageId: string, response: GenerateContentResponse): void {
@@ -241,6 +286,7 @@ export class ChatService {
     const functionCalls = response.functionCalls;
     if (functionCalls && functionCalls.length > 0) {
       const toolRequestMessage: Message = {
+        id: this.generateId(),
         sender: 'system',
         type: 'tool_request',
         text: 'The model wants to call the following tool(s):',
@@ -256,6 +302,7 @@ export class ChatService {
         throw new Error(`Excepted text but was undefined in response`);
       }
       const aiMessage: Message = {
+        id: this.generateId(),
         sender: 'ai',
         type: 'text',
         text: text,
@@ -268,12 +315,9 @@ export class ChatService {
   }
 
   async sendToolResponse(approved: boolean, toolCall: FunctionCall): Promise<void> {
-    if (!this.genAI) {
-      this.addMessageHelper({ text: 'Cannot send tool response: Chat session not initialized.', sender: 'system', type: 'error', timestamp: new Date() });
-      return;
-    }
 
     this.addMessageHelper({
+      id: this.generateId(),
       text: `User ${approved ? 'approved' : 'denied'} tool call: ${toolCall.name}`,
       sender: 'system',
       type: 'log',
@@ -282,9 +326,7 @@ export class ChatService {
 
     let toolResponsePart: Part;
     if (approved) {
-      // Here you would execute the actual tool. Since we are removing the filesystem tools for now,
-      // we will simulate a response.
-      const toolResult = { result: `Simulated result for ${toolCall.name}` };
+      const toolResult = await window.electronAPI.callMcpTool(toolCall.id!, toolCall.name!, toolCall.args);
       toolResponsePart = {
         functionResponse: {
           name: toolCall.name,
@@ -292,6 +334,7 @@ export class ChatService {
         },
       };
       this.addMessageHelper({
+        id: this.generateId(),
         sender: 'system',
         type: 'tool_result',
         text: `Tool ${toolCall.name} finished with status: Success`,
@@ -306,6 +349,7 @@ export class ChatService {
         },
       };
       this.addMessageHelper({
+        id: this.generateId(),
         sender: 'system',
         type: 'tool_result',
         text: `Tool ${toolCall.name} finished with status: Denied`,
@@ -319,7 +363,6 @@ export class ChatService {
     const loadingMessageId = `ai-loading-${Date.now()}`;
     this.addMessageHelper({
       id: loadingMessageId,
-      text: '...',
       sender: 'ai',
       type: 'loading',
       timestamp: new Date()
@@ -332,6 +375,7 @@ export class ChatService {
       console.error('Error sending tool response to Gemini:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.addMessageHelper({
+        id: this.generateId(),
         text: `Error: ${errorMessage}`,
         sender: 'system',
         type: 'error',
@@ -350,10 +394,18 @@ export class ChatService {
     const session = this.chatHistoryService.getSession(sessionId);
     if (session) {
       this.activeSession = session;
-      this.chatHistory = session.messages.map(m => ({
-        role: m.sender === 'user' ? 'user' : 'model',
-        parts: [{ text: m.text }]
-      }));
+      this.chatHistory = session.messages.reduce((messages, m) => {
+        if (m.sender === 'ai' && m.type === 'loading') {
+          return messages;
+        }
+        messages.push({
+          role: m.sender === 'user' ? 'user' : 'model',
+          parts: [{ text: m.text }]
+        });
+
+        return messages;
+        
+      }, [] as Content[]);
       this.messagesSubject.next(session.messages);
     }
   }
@@ -361,6 +413,7 @@ export class ChatService {
   public setModel(modelName: string): void {
     this.modelName = modelName;
     this.addMessageHelper({
+      id: this.generateId(),
       text: `Model switched to ${modelName}. The chat history has been cleared.`,
       sender: 'system',
       type: 'log',
@@ -369,13 +422,5 @@ export class ChatService {
     this.chatHistory = [];
     this.messagesSubject.next([]); // Clear messages
     this.initializeApp(); // Re-initialize with the new model
-  }
-
-  private cleanup(): void {
-    this.genAI = null;
-  }
-
-  ngOnDestroy() {
-    this.cleanup();
   }
 }
