@@ -15,8 +15,7 @@ export const Store = __Store.default || __Store
 
 console.log(Store);
 const store = new Store();
-let mainWindow: BrowserWindow | null;
-const pythonPort = 5001;
+let mainWindow!: BrowserWindow;
 
 // Zod schema for server definition
 const ServerDefinitionSchema = z.object({
@@ -194,7 +193,6 @@ function createWindow() {
 
   mainWindow.on("closed", () => {
     console.log("[createWindow] Main window closed.");
-    mainWindow = null;
   });
 
   // mainWindow.on("ready-to-show", () => {
@@ -271,12 +269,8 @@ ipcMain.handle("get-initial-workspace", async () => {
 // like reloading the app, so we keep it distinct.
 // The Angular app will call this, which in turn uses `select-workspace-dialog`
 // and then reloads.
-ipcMain.handle("change-workspace-and-reload", async () => {
+ipcMain.handle("change-workspace-and-reload", async function (): Promise<string> {
   console.log("[change-workspace-and-reload] User requested to change workspace.");
-  if (!mainWindow) {
-    console.error("[change-workspace-and-reload] mainWindow is not available.");
-    return null;
-  }
   // We can reuse the select-workspace-dialog logic here or call it directly
   // For now, let's keep it simple and assume the renderer calls select-workspace-dialog first,
   // then if a path is returned, it calls this to confirm and reload.

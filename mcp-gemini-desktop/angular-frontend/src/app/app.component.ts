@@ -1,10 +1,9 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { ChatAreaComponent } from './components/chat-area/chat-area.component';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { WorkspaceComponent } from './components/sidebar/workspace/workspace.component';
-import { WorkspaceStateService, WorkspaceState } from './services/workspace-state.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
@@ -28,34 +27,71 @@ import { SettingsComponent } from './components/settings/settings.component';
     SettingsComponent
   ],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  styleUrl: './app.component.scss'
 })
 export class AppComponent {
   title = 'GemCP Chat';
 
-  constructor(
-    private cdr: ChangeDetectorRef,
-    public workspaceStateService: WorkspaceStateService,
-  ) {
+  readonly sidenavMinWidth = 250;
+  readonly sidenavMaxWidth = window.innerWidth - 300;
+
+  get sidenavWidth(): number {
+    return parseInt(
+      getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width'),
+      10
+    );
   }
 
-  // Removed onWorkspaceStateChanged method
+  setSidenavWidth(width: number) {
+    const clampedWidth = Math.min(
+      Math.max(width, this.sidenavMinWidth),
+      this.sidenavMaxWidth
+    );
 
-  // Getter for easier access in template, though direct service signal access is also possible
-  get currentWorkspaceState(): WorkspaceState {
-    return this.workspaceStateService.workspaceState();
+    document.documentElement.style.setProperty('--sidebar-width', `${clampedWidth}px`);
   }
-  // Expose a method for the template to call if the workspace component needs to re-trigger a prompt
-  // This might be useful if the initial prompt in WorkspaceComponent fails and we want a button in AppComponent's "no workspace" view.
-  // For now, WorkspaceComponent handles its own button clicks.
-  // async requestWorkspaceSelection(): Promise<void> {
-  //   // This would typically call a method on the WorkspaceComponent instance,
-  //   // or WorkspaceComponent would expose an event that AppComponent listens to.
-  //   // For now, WorkspaceComponent's button directly calls its internal methods.
-  // }
 
-  get showMainContent(): boolean {
-    const state = this.currentWorkspaceState;
-    return !state.isLoading && !!state.path && !state.error;
+  /**
+   * This stores the state of the resizing event and is updated
+   * as events are fired.
+   */
+  resizingEvent = {
+    isResizing: false,
+    startingCursorX: 0,
+    startingWidth: 0,
+  };
+
+  startResizing(event: MouseEvent): void {
+    this.resizingEvent = {
+      isResizing: true,
+      startingCursorX: event.clientX,
+      startingWidth: this.sidenavWidth,
+    };
   }
+
+  /*
+ * This method runs when the mouse is moved anywhere in the browser
+ */
+@HostListener('window:mousemove', ['$event'])
+updateSidenavWidth(event: MouseEvent) {
+  // No need to even continue if we're not resizing
+  if (!this.resizingEvent.isResizing) {
+    return;
+  }
+
+  // 1. Calculate how much mouse has moved on the x-axis
+  const cursorDeltaX = event.clientX - this.resizingEvent.startingCursorX;
+
+  // 2. Calculate the new width according to initial width and mouse movement
+  const newWidth = this.resizingEvent.startingWidth + cursorDeltaX;
+
+  // 3. Set the new width
+  this.setSidenavWidth(newWidth);
+}
+
+@HostListener('window:mouseup')
+stopResizing() {
+  this.resizingEvent.isResizing = false;
+}
+
 }

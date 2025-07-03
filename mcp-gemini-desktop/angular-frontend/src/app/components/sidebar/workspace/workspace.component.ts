@@ -44,42 +44,19 @@ export class WorkspaceComponent {
   }
 
   async promptForWorkspace(): Promise<void> {
-    if (!window.electronAPI) {
-      this.workspaceStateService.setError("Cannot select workspace: Electron API not available.");
-      return;
-    }
     try {
       this.ngZone.run(() => {
         this.workspaceStateService.setLoading(true);
       });
 
-      await window.electronAPI.changeWorkspaceAndReload();
+      const newWorkpath = await window.electronAPI.changeWorkspaceAndReload();
+
+      this.workspaceStateService.setWorkspace(newWorkpath);
 
     } catch (err) {
       this.ngZone.run(() => {
         console.error('WorkspaceComponent: Error prompting for workspace:', err);
         this.workspaceStateService.setError(`Error selecting workspace: ${err instanceof Error ? err.message : String(err)}`);
-      });
-    }
-  }
-
-  async handleChangeWorkspace(): Promise<void> {
-    if (!window.electronAPI) {
-      this.workspaceStateService.setError("Cannot change workspace: Electron API not available.")
-      return;
-    }
-    try {
-      this.ngZone.run(() => {
-        this.workspaceStateService.setLoading(true);
-      });
-      console.log('WorkspaceComponent: Calling changeWorkspaceAndReload.');
-      // Main process handles dialog and reload. App will re-initialize.
-      await window.electronAPI.changeWorkspaceAndReload();
-      // No need to update state here as app reloads.
-    } catch (err) {
-      this.ngZone.run(() => {
-        console.error('WorkspaceComponent: Error changing workspace:', err);
-        this.workspaceStateService.setError(`Error changing workspace: ${err instanceof Error ? err.message : String(err)}`);
       });
     }
   }

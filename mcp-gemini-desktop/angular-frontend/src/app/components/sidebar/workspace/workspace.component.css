@@ -1,11 +1,30 @@
-/* Styles for WorkspaceComponent */
-.full-width-button {
-  width: 100%;
+:host {
+    -webkit-app-region: no-drag;
 }
 
-/* Optional: If specific margin or padding is needed for the card inside app-workspace */
-/*
-:host mat-card {
-  margin-bottom: 16px;
+.workspace-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
-*/
+
+.workspace-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.workspace-name {
+    font-weight: 500;
+}
+
+.loading-container, .error-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.error-message {
+    color: red;
+}

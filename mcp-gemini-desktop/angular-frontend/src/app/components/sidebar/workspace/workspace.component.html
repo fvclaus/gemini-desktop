@@ -1,37 +1,18 @@
 <div *ngIf="workspaceState$() as state" class="workspace-container">
-    <mat-card class="workspace-card">
-        <mat-card-header class="workspace-card-header" *ngIf="!state.isLoading && !state.error">
-            <mat-icon mat-card-avatar>folder</mat-icon>
-            <!-- TODO Mouse over for full path -->
-            <mat-card-title class="workspace-title">{{ extractFolderName(state.path) }}</mat-card-title>
-        </mat-card-header>
-
-        <mat-card-content class="workspace-card-content">
-            <div *ngIf="state.isLoading" class="loading-container">
-                <mat-spinner diameter="50"></mat-spinner>
-                <p>Loading workspace...</p>
-            </div>
-
-            <div *ngIf="state.error" class="error-container">
-                <mat-icon color="warn">error_outline</mat-icon>
-                <p class="error-message">{{ state.error }}</p>
-            </div>
-        </mat-card-content>
-
-        <mat-card-actions class="workspace-card-actions">
-            <button mat-raised-button color="primary"
-                (click)="state.path ? handleChangeWorkspace() : promptForWorkspace()" [disabled]="state.isLoading"
-                class="workspace-button">
-                <mat-icon>{{ state.path ? 'sync_alt' : 'add_circle_outline' }}</mat-icon>
-                {{ state.path ? 'Change Workspace' : 'Select Workspace' }}
-            </button>
-        </mat-card-actions>
-    </mat-card>
-</div>
-
-<ng-template #noApiError>
-    <div class="error-container">
-        <mat-icon color="warn">error_outline</mat-icon>
-        <p class="error-message">Electron API not available. Workspace functionality is disabled.</p>
+    <div *ngIf="!state.isLoading && !state.error" class="workspace-content">
+        <mat-icon>folder</mat-icon>
+        <span class="workspace-name">{{ extractFolderName(state.path) }}</span>
+        <button mat-icon-button (click)="promptForWorkspace()" [disabled]="state.isLoading">
+            <mat-icon>{{ state.path ? 'sync_alt' : 'add_circle_outline' }}</mat-icon>
+        </button>
     </div>
-</ng-template>
+
+    <div *ngIf="state.isLoading" class="loading-container">
+        <mat-spinner diameter="24"></mat-spinner>
+    </div>
+
+    <div *ngIf="state.error" class="error-container">
+        <mat-icon color="warn">error_outline</mat-icon>
+        <p class="error-message">{{ state.error }}</p>
+    </div>
+</div>

@@ -32,7 +32,7 @@ declare global {
       getInitialWorkspace: () => Promise<string | null>;
       onWorkspaceSelected: (callback: (path: string | null) => void) => void;
       getSelectedWorkspace: () => Promise<string | null>;
-      changeWorkspaceAndReload: () => Promise<string | null>;
+      changeWorkspaceAndReload: () => Promise<string>;
       showOpenDialog: (options: ShowOpenFileDialog | ShowOpenDirectoryDialog) => Promise<ShowOpenDialogCanceledResponse | ShowOpenDialogResponse>;
       readFileContent: (filePath: string) => Promise<string>;
       onApiKeyUpdate: (callback: (result: { success: boolean; message?: string }) => void) => void;

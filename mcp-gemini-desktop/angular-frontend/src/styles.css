@@ -1,6 +1,6 @@
 /* styles.css - Global styles: base, Electron, core layout, Markdown/KaTeX */
 :root {
-  --title-bar-height: 38px;
+  --title-bar-height: 64px;
   --sidebar-width: 280px;
 
   /* Semantic status colors for chips - can be overridden by component styles if needed */

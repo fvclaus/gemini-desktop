@@ -9,14 +9,7 @@
     </div>
 
     <div [ngSwitch]="activeTab">
-        <div *ngSwitchCase="'new'">
-            <mat-toolbar class="sidebar-toolbar">
-                <span>Workspace</span>
-            </mat-toolbar>
-            <div class="sidebar-section">
-                <app-workspace></app-workspace>
-            </div>
-        </div>
+        <div *ngSwitchCase="'new'"></div>
 
         <div *ngSwitchCase="'servers'">
             <div class="sidebar-footer-material done-button-container">
