@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatSessionHistoryService } from '../../services/chat-session-history.service';
 import { ChatService } from '../../services/chat.service';
@@ -11,15 +11,13 @@ import { MatListModule } from '@angular/material/list';
   standalone: true,
   imports: [CommonModule, MatCardModule, MatListModule],
   templateUrl: './chat-history.component.html',
-  styleUrls: ['./chat-history.component.css']
+  styleUrls: ['./chat-history.component.css'],
 })
 export class ChatHistoryComponent implements OnInit {
-  public sessions: ChatSession[] = [];
+  private chatHistoryService = inject(ChatSessionHistoryService);
+  private chatService = inject(ChatService);
 
-  constructor(
-    private chatHistoryService: ChatSessionHistoryService,
-    private chatService: ChatService
-  ) { }
+  public sessions: ChatSession[] = [];
 
   ngOnInit(): void {
     this.sessions = this.chatHistoryService.getAllSessions();

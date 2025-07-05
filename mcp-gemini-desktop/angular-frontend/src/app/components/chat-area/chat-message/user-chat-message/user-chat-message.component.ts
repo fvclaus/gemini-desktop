@@ -8,7 +8,7 @@ import { UserMessage } from '../../../../services/chat.service';
   standalone: true,
   imports: [CommonModule, MatCardModule],
   templateUrl: './user-chat-message.component.html',
-  styleUrl: './user-chat-message.component.css'
+  styleUrl: './user-chat-message.component.css',
 })
 export class UserChatMessageComponent {
   @Input() message!: UserMessage;

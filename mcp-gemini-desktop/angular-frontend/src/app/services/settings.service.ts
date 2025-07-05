@@ -1,14 +1,10 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
 
 const STORAGE_API_KEY = 'api_key';
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SettingsService {
-
-  constructor() { }
-
   getApiKey(): string | null {
     return localStorage.getItem(STORAGE_API_KEY);
   }
@@ -19,18 +15,16 @@ export class SettingsService {
 
   getModels(): string[] {
     // In the future, this could fetch from the API, but for now, it's a static list.
-    return [
-      "gemini-2.5-pro-preview-05-06",
-      "gemini-2.5-flash"
-    ];
+    return ['gemini-2.5-pro-preview-05-06', 'gemini-2.5-flash'];
   }
 
   getModel(): string {
     const availableModels = this.getModels();
     const lastModel = localStorage.getItem('gemini-model');
-    const modelToSelect = lastModel && availableModels.includes(lastModel)
-      ? lastModel
-      : availableModels[0];
+    const modelToSelect =
+      lastModel && availableModels.includes(lastModel)
+        ? lastModel
+        : availableModels[0];
     return modelToSelect;
   }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule, NgFor } from '@angular/common';
 import { ChatMessageComponent } from './chat-message/chat-message.component';
 import { ChatInputComponent } from './chat-input/chat-input.component';
@@ -20,28 +20,22 @@ export type { Message }; // Re-export if needed by template or other components 
     NgFor,
     ChatMessageComponent,
     ChatInputComponent,
-    MatToolbarModule
+    MatToolbarModule,
   ],
   templateUrl: './chat-area.component.html',
-  styleUrl: './chat-area.component.css'
+  styleUrl: './chat-area.component.css',
 })
 export class ChatAreaComponent implements OnInit, OnDestroy {
+  private chatService = inject(ChatService);
+
   messages: Message[] = [];
   private messagesSubscription: Subscription | undefined;
-
-  constructor(
-    private chatService: ChatService,
-    private cdr: ChangeDetectorRef // Inject ChangeDetectorRef for manual change detection if needed
-  ) {}
 
   ngOnInit(): void {
     this.messagesSubscription = this.chatService.messages$.subscribe(
       (newMessages) => {
         this.messages = newMessages;
-        this.cdr.detectChanges(); // Trigger change detection as messages update
-        // console.log('ChatAreaComponent received new messages:', this.messages);
-        // TODO: Scroll to bottom of chat messages
-      }
+      },
     );
   }
 

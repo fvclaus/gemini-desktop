@@ -9,7 +9,7 @@ import { SystemErrorMessage } from '../../../../services/chat.service';
   standalone: true,
   imports: [CommonModule, MatCardModule, MatIconModule],
   templateUrl: './system-error-chat-message.component.html',
-  styleUrl: './system-error-chat-message.component.css'
+  styleUrl: './system-error-chat-message.component.css',
 })
 export class SystemErrorChatMessageComponent {
   @Input() message!: SystemErrorMessage;

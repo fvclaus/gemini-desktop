@@ -1,8 +1,14 @@
-import { Injectable, NgZone } from '@angular/core';
-import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { Injectable, NgZone, inject } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { marked } from 'marked';
 import katex from 'katex';
-import { GoogleGenAI, Content, Part, FunctionCall, GenerateContentResponse } from '@google/genai';
+import {
+  GoogleGenAI,
+  Content,
+  Part,
+  FunctionCall,
+  GenerateContentResponse,
+} from '@google/genai';
 import { SettingsService } from './settings.service';
 import { McpServerStatus } from '../../../../src/shared/types';
 import { ChatSessionHistoryService } from './chat-session-history.service';
@@ -15,7 +21,7 @@ export interface UserMessage {
   sender: 'user';
   type: 'message';
   text: string;
-  timestamp: Date
+  timestamp: Date;
 }
 
 export interface LoadingMessage {
@@ -26,26 +32,26 @@ export interface LoadingMessage {
 }
 
 export interface AiMessage {
-  id: string,
-  sender: 'ai',
-  type: 'message',
-  text: string,
-  htmlContent: string,
-  timestamp: Date,
+  id: string;
+  sender: 'ai';
+  type: 'message';
+  text: string;
+  htmlContent: string;
+  timestamp: Date;
 }
 
 export interface SystemErrorMessage {
-  id: string,
-  sender: 'system',
-  type: 'error',
-  text: string,
-  details?: string,
-  showDetails?: boolean,
-  timestamp: Date,
+  id: string;
+  sender: 'system';
+  type: 'error';
+  text: string;
+  details?: string;
+  showDetails?: boolean;
+  timestamp: Date;
 }
 
 export interface ToolDecisionMessage {
-  id: string,
+  id: string;
   sender: 'user';
   type: 'tool_decision';
   approval: 'approved' | 'rejected';
@@ -54,33 +60,43 @@ export interface ToolDecisionMessage {
 
 export interface ToolRequestMessage {
   id: string;
-  sender: 'ai',
-  type: 'tool_request',
-  tools: {name: string; args?: Record<string, unknown>}[],
-  showRequestedTools?: boolean,
-  timestamp: Date,
+  sender: 'ai';
+  type: 'tool_request';
+  tools: { name: string; args?: Record<string, unknown> }[];
+  showRequestedTools?: boolean;
+  timestamp: Date;
 }
 
 export interface ToolResultMessage {
   id: string;
-  sender: 'system',
-  type: 'tool_result',
-  tool: {name: string; args?: Record<string, unknown>},
-  details: string,
-  showToolResults?: boolean,
-  timestamp: Date,
+  sender: 'system';
+  type: 'tool_result';
+  tool: { name: string; args?: Record<string, unknown> };
+  details: string;
+  showToolResults?: boolean;
+  timestamp: Date;
 }
 
-export type Message = UserMessage | LoadingMessage | SystemErrorMessage |  AiMessage | ToolRequestMessage | ToolResultMessage | ToolDecisionMessage;
-
+export type Message =
+  | UserMessage
+  | LoadingMessage
+  | SystemErrorMessage
+  | AiMessage
+  | ToolRequestMessage
+  | ToolResultMessage
+  | ToolDecisionMessage;
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ChatService {
+  private ngZone = inject(NgZone);
+  private settingsService = inject(SettingsService);
+  private chatHistoryService = inject(ChatSessionHistoryService);
+
   private genAI!: GoogleGenAI;
   private apiKey: string | null = null;
-  private modelName: string = 'gemini-2.5-pro-preview-05-06'; // Default model
+  private modelName = 'gemini-2.5-pro-preview-05-06'; // Default model
   private chatHistory: Content[] = [];
   private activeSession: ChatSession | null = null;
 
@@ -88,14 +104,10 @@ export class ChatService {
   messages$: Observable<Message[]> = this.messagesSubject.asObservable();
 
   private mcpServersSubject = new BehaviorSubject<McpServerStatus[]>([]);
-  mcpServers$: Observable<McpServerStatus[]> = this.mcpServersSubject.asObservable();
+  mcpServers$: Observable<McpServerStatus[]> =
+    this.mcpServersSubject.asObservable();
 
-
-  constructor(
-    private ngZone: NgZone,
-    private settingsService: SettingsService,
-    private chatHistoryService: ChatSessionHistoryService
-  ) {
+  constructor() {
     this.apiKey = this.settingsService.getApiKey();
     this.initializeApp();
 
@@ -106,11 +118,11 @@ export class ChatService {
       });
     });
 
-    window.electronAPI.getMcpServers().then(statuses => {
-        this.ngZone.run(() => {
-            console.log("Received mcp servers on startup", statuses);
-            this.mcpServersSubject.next(statuses);
-        });
+    window.electronAPI.getMcpServers().then((statuses) => {
+      this.ngZone.run(() => {
+        console.log('Received mcp servers on startup', statuses);
+        this.mcpServersSubject.next(statuses);
+      });
     });
   }
 
@@ -122,15 +134,14 @@ export class ChatService {
         sender: 'system',
         type: 'error',
         text: 'API Key is not configured. Please set it in the settings.',
-        timestamp: new Date()
+        timestamp: new Date(),
       });
       return;
     }
 
     try {
-      this.genAI = new GoogleGenAI({apiKey: this.apiKey});
+      this.genAI = new GoogleGenAI({ apiKey: this.apiKey });
       console.log('Gemini client initialized successfully.');
-
     } catch (error) {
       console.error('Error initializing Gemini client:', error);
       this.addMessageHelper({
@@ -139,7 +150,7 @@ export class ChatService {
         sender: 'system',
         type: 'error',
         details: error instanceof Error ? error.message : String(error),
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     }
   }
@@ -148,9 +159,15 @@ export class ChatService {
     this.ngZone.run(() => {
       const currentMessages = this.messagesSubject.getValue();
       if (updateId) {
-        const existingMsgIndex = currentMessages.findIndex(m => m.id === updateId);
+        const existingMsgIndex = currentMessages.findIndex(
+          (m) => m.id === updateId,
+        );
         if (existingMsgIndex !== -1) {
-          currentMessages[existingMsgIndex] = { ...currentMessages[existingMsgIndex], ...message, id: updateId };
+          currentMessages[existingMsgIndex] = {
+            ...currentMessages[existingMsgIndex],
+            ...message,
+            id: updateId,
+          };
           this.messagesSubject.next([...currentMessages]);
           return;
         }
@@ -164,7 +181,9 @@ export class ChatService {
 
       if (!this.activeSession) {
         // TODO Improve this Typecast
-        const newSession = this.chatHistoryService.createSession(message as UserMessage);
+        const newSession = this.chatHistoryService.createSession(
+          message as UserMessage,
+        );
         this.activeSession = newSession;
       } else if (!(message.sender === 'ai' && message.type === 'loading')) {
         this.activeSession.messages.push(message);
@@ -173,8 +192,11 @@ export class ChatService {
     });
   }
 
-  private renderLaTeX(text: string): { processedText: string, latexPlaceholders: Array<{ placeholder: string, rendered: string }> } {
-    const latexPlaceholders: Array<{ placeholder: string, rendered: string }> = [];
+  private renderLaTeX(text: string): {
+    processedText: string;
+    latexPlaceholders: { placeholder: string; rendered: string }[];
+  } {
+    const latexPlaceholders: { placeholder: string; rendered: string }[] = [];
     let placeholderIndex = 0;
 
     function replaceAndRender(match: string, displayMode: boolean): string {
@@ -194,8 +216,13 @@ export class ChatService {
       }
     }
 
-    let processedText = text.replace(/\\$\\$([\\s\\S]*?)\\$\\$/g, (match) => replaceAndRender(match, true));
-    processedText = processedText.replace(/(?<!\\$)\\$([^$]+)\\$(?!\\$)/g, (match) => replaceAndRender(match, false));
+    let processedText = text.replace(/\\$\\$([\\s\\S]*?)\\$\\$/g, (match) =>
+      replaceAndRender(match, true),
+    );
+    processedText = processedText.replace(
+      /(?<!\\$)\\$([^$]+)\\$(?!\\$)/g,
+      (match) => replaceAndRender(match, false),
+    );
     return { processedText, latexPlaceholders };
   }
 
@@ -223,7 +250,7 @@ export class ChatService {
         text: 'Error: Chat session not initialized. Please check your API key.',
         sender: 'system',
         type: 'error',
-        timestamp: new Date()
+        timestamp: new Date(),
       });
       return;
     }
@@ -233,7 +260,7 @@ export class ChatService {
       type: 'message',
       text: messageText,
       sender: 'user',
-      timestamp: new Date()
+      timestamp: new Date(),
     };
     this.addMessageHelper(userMessage);
     this.chatHistory.push({ role: 'user', parts: [{ text: messageText }] });
@@ -243,36 +270,44 @@ export class ChatService {
       id: loadingMessageId,
       sender: 'ai',
       type: 'loading',
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     try {
-      const result = await this.genAI.models.generateContent({ model: this.modelName, contents: this.chatHistory, config: {
-        tools: this.mcpServersSubject.getValue()
-          .filter(mcpServer => mcpServer.state === "STARTED")
-          .map(mcpServer => {
-
-          return {
-            functionDeclarations: mcpServer.tools.map(t => ({
-              name: t.name,
-              description: t.description,
-              parameters: t.inputSchema
-            }))
-          }
-        })
-      } });
+      const result = await this.genAI.models.generateContent({
+        model: this.modelName,
+        contents: this.chatHistory,
+        config: {
+          tools: this.mcpServersSubject
+            .getValue()
+            .filter((mcpServer) => mcpServer.state === 'STARTED')
+            .map((mcpServer) => {
+              return {
+                functionDeclarations: mcpServer.tools.map((t) => ({
+                  name: t.name,
+                  description: t.description,
+                  parameters: t.inputSchema,
+                })),
+              };
+            }),
+        },
+      });
       this.handleGeminiResponse(loadingMessageId, result);
     } catch (error) {
       console.error('Error sending message to Gemini:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.addMessageHelper({
-        id: this.generateId(),
-        text: `Error: ${errorMessage}`,
-        sender: 'system',
-        type: 'error',
-        details: errorMessage,
-        timestamp: new Date()
-      }, loadingMessageId);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.addMessageHelper(
+        {
+          id: this.generateId(),
+          text: `Error: ${errorMessage}`,
+          sender: 'system',
+          type: 'error',
+          details: errorMessage,
+          timestamp: new Date(),
+        },
+        loadingMessageId,
+      );
     }
   }
 
@@ -280,10 +315,15 @@ export class ChatService {
     return `${Date.now()}`;
   }
 
-  private handleGeminiResponse(loadingMessageId: string, response: GenerateContentResponse): void {
+  private handleGeminiResponse(
+    loadingMessageId: string,
+    response: GenerateContentResponse,
+  ): void {
     this.ngZone.run(() => {
       const currentMessages = this.messagesSubject.getValue();
-      const updatedMessages = currentMessages.filter(m => m.id !== loadingMessageId);
+      const updatedMessages = currentMessages.filter(
+        (m) => m.id !== loadingMessageId,
+      );
       this.messagesSubject.next(updatedMessages);
     });
 
@@ -294,11 +334,17 @@ export class ChatService {
         sender: 'ai',
         type: 'tool_request',
         showRequestedTools: true,
-        tools: functionCalls as {name: string, args?: Record<string, unknown>}[],
+        tools: functionCalls as {
+          name: string;
+          args?: Record<string, unknown>;
+        }[],
         timestamp: new Date(),
       };
       this.addMessageHelper(toolRequestMessage);
-      this.chatHistory.push({ role: 'model', parts: functionCalls.map((fc: FunctionCall) => ({ functionCall: fc })) });
+      this.chatHistory.push({
+        role: 'model',
+        parts: functionCalls.map((fc: FunctionCall) => ({ functionCall: fc })),
+      });
     } else {
       const text = response.text;
       if (text === undefined) {
@@ -318,20 +364,26 @@ export class ChatService {
     }
   }
 
-  async sendToolResponse(approved: boolean, toolCall: FunctionCall[]): Promise<void> {
-
+  async sendToolResponse(
+    approved: boolean,
+    toolCall: FunctionCall[],
+  ): Promise<void> {
     this.addMessageHelper({
       id: this.generateId(),
       sender: 'user',
       type: 'tool_decision',
-      approval: approved? 'approved' : 'rejected',
-      timestamp: new Date()
+      approval: approved ? 'approved' : 'rejected',
+      timestamp: new Date(),
     });
 
     let toolResponsePart: Part;
     if (approved) {
       // TODO Support more than one tool call
-      const toolResult = await window.electronAPI.callMcpTool(toolCall[0].id!, toolCall[0].name!, toolCall[0].args);
+      const toolResult = await window.electronAPI.callMcpTool(
+        toolCall[0].id!,
+        toolCall[0].name!,
+        toolCall[0].args,
+      );
       toolResponsePart = {
         functionResponse: {
           name: toolCall[0].name,
@@ -342,7 +394,7 @@ export class ChatService {
         id: this.generateId(),
         sender: 'system',
         type: 'tool_result',
-        tool: {name: toolCall[0].name!, args: toolCall[0].args},
+        tool: { name: toolCall[0].name!, args: toolCall[0].args },
         details: toolResult.result,
         timestamp: new Date(),
       });
@@ -350,7 +402,7 @@ export class ChatService {
       toolResponsePart = {
         functionResponse: {
           name: toolCall[0].name,
-          response: { result: "User denied the tool call." },
+          response: { result: 'User denied the tool call.' },
         },
       };
     }
@@ -362,23 +414,30 @@ export class ChatService {
       id: loadingMessageId,
       sender: 'ai',
       type: 'loading',
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     try {
-      const result = await this.genAI.models.generateContent({ model: this.modelName, contents: this.chatHistory });
+      const result = await this.genAI.models.generateContent({
+        model: this.modelName,
+        contents: this.chatHistory,
+      });
       this.handleGeminiResponse(loadingMessageId, result);
     } catch (error) {
       console.error('Error sending tool response to Gemini:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.addMessageHelper({
-        id: this.generateId(),
-        text: `Error: ${errorMessage}`,
-        sender: 'system',
-        type: 'error',
-        details: errorMessage,
-        timestamp: new Date()
-      }, loadingMessageId);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.addMessageHelper(
+        {
+          id: this.generateId(),
+          text: `Error: ${errorMessage}`,
+          sender: 'system',
+          type: 'error',
+          details: errorMessage,
+          timestamp: new Date(),
+        },
+        loadingMessageId,
+      );
     }
   }
 
@@ -392,16 +451,21 @@ export class ChatService {
     if (session) {
       this.activeSession = session;
       this.chatHistory = session.messages.reduce((messages, m) => {
-        if (m.type === 'loading' || m.type === 'tool_decision' || m.type === 'tool_request' || m.type === 'tool_result' || m.type === 'error') {
+        if (
+          m.type === 'loading' ||
+          m.type === 'tool_decision' ||
+          m.type === 'tool_request' ||
+          m.type === 'tool_result' ||
+          m.type === 'error'
+        ) {
           return messages;
         }
         messages.push({
           role: m.sender === 'user' ? 'user' : 'model',
-          parts: [{ text: m.text }]
+          parts: [{ text: m.text }],
         });
 
         return messages;
-        
       }, [] as Content[]);
       this.messagesSubject.next(session.messages);
     }

@@ -10,7 +10,6 @@ import { MatIcon } from '@angular/material/icon';
 import { SettingsModalComponent } from './components/settings-modal/settings-modal.component';
 import { SettingsComponent } from './components/settings/settings.component';
 
-
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -24,10 +23,10 @@ import { SettingsComponent } from './components/settings/settings.component';
     MatButtonModule,
     MatIcon,
     SettingsModalComponent,
-    SettingsComponent
+    SettingsComponent,
   ],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrl: './app.component.scss',
 })
 export class AppComponent {
   title = 'GemCP Chat';
@@ -37,18 +36,23 @@ export class AppComponent {
 
   get sidenavWidth(): number {
     return parseInt(
-      getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width'),
-      10
+      getComputedStyle(document.documentElement).getPropertyValue(
+        '--sidebar-width',
+      ),
+      10,
     );
   }
 
   setSidenavWidth(width: number) {
     const clampedWidth = Math.min(
       Math.max(width, this.sidenavMinWidth),
-      this.sidenavMaxWidth
+      this.sidenavMaxWidth,
     );
 
-    document.documentElement.style.setProperty('--sidebar-width', `${clampedWidth}px`);
+    document.documentElement.style.setProperty(
+      '--sidebar-width',
+      `${clampedWidth}px`,
+    );
   }
 
   /**
@@ -70,28 +74,27 @@ export class AppComponent {
   }
 
   /*
- * This method runs when the mouse is moved anywhere in the browser
- */
-@HostListener('window:mousemove', ['$event'])
-updateSidenavWidth(event: MouseEvent) {
-  // No need to even continue if we're not resizing
-  if (!this.resizingEvent.isResizing) {
-    return;
+   * This method runs when the mouse is moved anywhere in the browser
+   */
+  @HostListener('window:mousemove', ['$event'])
+  updateSidenavWidth(event: MouseEvent) {
+    // No need to even continue if we're not resizing
+    if (!this.resizingEvent.isResizing) {
+      return;
+    }
+
+    // 1. Calculate how much mouse has moved on the x-axis
+    const cursorDeltaX = event.clientX - this.resizingEvent.startingCursorX;
+
+    // 2. Calculate the new width according to initial width and mouse movement
+    const newWidth = this.resizingEvent.startingWidth + cursorDeltaX;
+
+    // 3. Set the new width
+    this.setSidenavWidth(newWidth);
   }
 
-  // 1. Calculate how much mouse has moved on the x-axis
-  const cursorDeltaX = event.clientX - this.resizingEvent.startingCursorX;
-
-  // 2. Calculate the new width according to initial width and mouse movement
-  const newWidth = this.resizingEvent.startingWidth + cursorDeltaX;
-
-  // 3. Set the new width
-  this.setSidenavWidth(newWidth);
-}
-
-@HostListener('window:mouseup')
-stopResizing() {
-  this.resizingEvent.isResizing = false;
-}
-
+  @HostListener('window:mouseup')
+  stopResizing() {
+    this.resizingEvent.isResizing = false;
+  }
 }

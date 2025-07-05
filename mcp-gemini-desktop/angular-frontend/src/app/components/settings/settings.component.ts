@@ -1,34 +1,32 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { SettingsService } from '../../services/settings.service';
 import { ModalService } from '../../services/modal.service';
-import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-settings',
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.css'],
-  imports: [CommonModule, ReactiveFormsModule]
+  imports: [CommonModule, ReactiveFormsModule],
 })
-export class SettingsComponent implements OnInit {
+export class SettingsComponent {
+  private fb = inject(FormBuilder);
+  private settingsService = inject(SettingsService);
+  private modalService = inject(ModalService);
+
   settingsForm: FormGroup;
   models: string[] = [];
   selectedModel: string | null = null;
 
-  constructor(
-    private fb: FormBuilder,
-    private settingsService: SettingsService,
-    private modalService: ModalService
-  ) {
+  constructor() {
+    const settingsService = this.settingsService;
+
     this.models = settingsService.getModels();
     this.settingsForm = this.fb.group({
       apiKey: [''],
-      model: ['']
+      model: [''],
     });
-  }
-
-  ngOnInit(): void {
   }
 
   onSave(): void {
@@ -37,12 +35,10 @@ export class SettingsComponent implements OnInit {
     }
 
     const apiKey = this.settingsForm.get('apiKey')?.value;
-    const selectedModel = this.settingsForm.get('model')?.value;
 
     if (apiKey) {
       this.settingsService.saveApiKey(apiKey);
     }
-
 
     this.modalService.close();
   }

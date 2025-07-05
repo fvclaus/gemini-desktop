@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 @Component({
+  // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'formly-array-type',
   template: `
     <div class="mb-3">
@@ -17,13 +18,23 @@ import { MatIconModule } from '@angular/material/icon';
         </button>
       </div>
 
-      <div class="alert alert-danger" role="alert" *ngIf="showError && formControl.errors">
+      <div
+        class="alert alert-danger"
+        role="alert"
+        *ngIf="showError && formControl.errors"
+      >
         <formly-validation-message [field]="field"></formly-validation-message>
       </div>
 
-      <div *ngFor="let field of field.fieldGroup; let i = index" class="row align-items-start">
+      <div
+        *ngFor="let field of field.fieldGroup; let i = index"
+        class="row align-items-start"
+      >
         <formly-field class="col" [field]="field"></formly-field>
-        <div *ngIf="field.props?.['removable'] !== false" class="col-2 text-right">
+        <div
+          *ngIf="field.props?.['removable'] !== false"
+          class="col-2 text-right"
+        >
           <button mat-icon-button type="button" (click)="remove(i)">
             <mat-icon>remove</mat-icon>
           </button>
@@ -32,6 +43,13 @@ import { MatIconModule } from '@angular/material/icon';
     </div>
   `,
   standalone: true,
-  imports: [NgIf, FormlyField, FormlyValidationMessage, NgFor, MatButtonModule, MatIconModule],
+  imports: [
+    NgIf,
+    FormlyField,
+    FormlyValidationMessage,
+    NgFor,
+    MatButtonModule,
+    MatIconModule,
+  ],
 })
 export class ArrayTypeComponent extends FieldArrayType {}

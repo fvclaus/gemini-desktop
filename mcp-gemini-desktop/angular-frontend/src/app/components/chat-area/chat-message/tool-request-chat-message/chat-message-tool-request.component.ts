@@ -1,8 +1,10 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { ChatService, Message, ToolRequestMessage } from '../../../../services/chat.service';
-import { FunctionCall } from '@google/genai';
+import {
+  ChatService,
+  ToolRequestMessage,
+} from '../../../../services/chat.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatIcon } from '@angular/material/icon';
 
@@ -11,12 +13,12 @@ import { MatIcon } from '@angular/material/icon';
   standalone: true,
   imports: [CommonModule, MatButtonModule, MatCardModule, MatIcon],
   templateUrl: './chat-message-tool-request.component.html',
-  styleUrl: './chat-message-tool-request.component.css'
+  styleUrl: './chat-message-tool-request.component.css',
 })
 export class ToolRequestChatMessageComponent {
-  @Input() message!: ToolRequestMessage;
+  private chatService = inject(ChatService);
 
-  constructor(private chatService: ChatService) {}
+  @Input() message!: ToolRequestMessage;
 
   onToolResponse(approved: boolean): void {
     if (this.message) {
@@ -25,6 +27,4 @@ export class ToolRequestChatMessageComponent {
       this.message.showRequestedTools = false;
     }
   }
-
-
 }

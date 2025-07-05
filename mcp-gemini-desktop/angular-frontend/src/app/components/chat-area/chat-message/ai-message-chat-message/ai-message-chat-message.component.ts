@@ -1,4 +1,4 @@
-import { Component, Input, SecurityContext } from '@angular/core';
+import { Component, Input, SecurityContext, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { AiMessage } from '../../../../services/chat.service';
@@ -9,14 +9,17 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
   standalone: true,
   imports: [CommonModule, MatCardModule],
   templateUrl: './ai-message-chat-message.component.html',
-  styleUrl: './ai-message-chat-message.component.css'
+  styleUrl: './ai-message-chat-message.component.css',
 })
 export class AiMessageChatMessageComponent {
+  private sanitizer = inject(DomSanitizer);
+
   @Input() message!: AiMessage;
 
-  constructor(private sanitizer: DomSanitizer) {}
-
   getFormattedContent(): SafeHtml {
-    return this.sanitizer.sanitize(SecurityContext.HTML, this.message.htmlContent) || '';
+    return (
+      this.sanitizer.sanitize(SecurityContext.HTML, this.message.htmlContent) ||
+      ''
+    );
   }
 }

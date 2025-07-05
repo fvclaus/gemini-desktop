@@ -1,7 +1,10 @@
-import { Component, Input } from '@angular/core';
-import { CommonModule, NgClass, NgFor, NgIf } from '@angular/common';
+import { Component, Input, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { ChatService } from '../../../../services/chat.service'; // Import ChatService
-import { McpServerStatus, McpToolDefinition } from '../../../../../../../src/shared/types';
+import {
+  McpServerStatus,
+  McpToolDefinition,
+} from '../../../../../../../src/shared/types';
 import { MatListModule } from '@angular/material/list';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,20 +24,21 @@ import { ToolInfoDialogComponent } from '../../../tool-info-dialog/tool-info-dia
     MatIconModule,
     MatButtonModule,
     MatDividerModule,
-    MatExpansionModule // Add MatExpansionModule to imports
+    MatExpansionModule, // Add MatExpansionModule to imports
   ],
   templateUrl: './server-item.component.html',
-  styleUrl: './server-item.component.css'
+  styleUrl: './server-item.component.css',
 })
 export class ServerItemComponent {
-  @Input() server!: McpServerStatus;
+  private chatService = inject(ChatService);
+  private dialog = inject(MatDialog);
 
-  constructor(private chatService: ChatService, private dialog: MatDialog) {}
+  @Input() server!: McpServerStatus;
 
   openToolDialog(tool: McpToolDefinition): void {
     this.dialog.open(ToolInfoDialogComponent, {
       width: '600px',
-      data: { tool, serverName: this.server.identifier }
+      data: { tool, serverName: this.server.identifier },
     });
   }
 
@@ -43,7 +47,10 @@ export class ServerItemComponent {
       // TODO
       // this.chatService.deleteServer(this.server.name);
     } else {
-      console.error('Cannot delete server: server data or name is missing.', this.server);
+      console.error(
+        'Cannot delete server: server data or name is missing.',
+        this.server,
+      );
     }
   }
 }

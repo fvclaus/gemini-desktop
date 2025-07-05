@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WorkspaceComponent } from './workspace/workspace.component';
 // WorkspaceStateService might still be used by WorkspaceComponent, but SidebarComponent itself doesn't directly use its state here.
@@ -8,7 +8,6 @@ import { ChatService } from '../../services/chat.service';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { ModalService } from '../../services/modal.service';
 import { ChatHistoryComponent } from '../chat-history/chat-history.component';
 
 @Component({
@@ -21,16 +20,15 @@ import { ChatHistoryComponent } from '../chat-history/chat-history.component';
     MatToolbarModule,
     MatButtonModule,
     MatIconModule,
-    ChatHistoryComponent
+    ChatHistoryComponent,
   ],
   templateUrl: './sidebar.component.html',
-  styleUrl: './sidebar.component.css'
+  styleUrl: './sidebar.component.css',
 })
 export class SidebarComponent {
+  private chatService = inject(ChatService);
+
   public activeTab: 'new' | 'servers' = 'new';
-
-  constructor(private chatService: ChatService, private modalService: ModalService) {}
-
 
   setTab(tab: 'new' | 'servers'): void {
     this.activeTab = tab;

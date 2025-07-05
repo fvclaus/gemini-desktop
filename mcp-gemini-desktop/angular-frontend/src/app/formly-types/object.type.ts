@@ -4,15 +4,23 @@ import { NgIf, NgFor } from '@angular/common';
 import { FormlyField, FormlyValidationMessage } from '@ngx-formly/core';
 
 @Component({
+  // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'formly-object-type',
   template: `
     <div class="mb-3">
       <legend *ngIf="props.label">{{ props.label }}</legend>
       <p *ngIf="props.description">{{ props.description }}</p>
-      <div class="alert alert-danger" role="alert" *ngIf="showError && formControl.errors">
+      <div
+        class="alert alert-danger"
+        role="alert"
+        *ngIf="showError && formControl.errors"
+      >
         <formly-validation-message [field]="field"></formly-validation-message>
       </div>
-      <formly-field *ngFor="let f of field.fieldGroup" [field]="f"></formly-field>
+      <formly-field
+        *ngFor="let f of field.fieldGroup"
+        [field]="f"
+      ></formly-field>
     </div>
   `,
   standalone: true,

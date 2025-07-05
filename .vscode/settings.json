@@ -1,0 +1,12 @@
+{
+    "[javascript]": {
+      "editor.codeActionsOnSave": [
+          "source.fixAll.eslint"
+      ]
+    },
+    "[typescript]": {
+      "editor.codeActionsOnSave": [
+          "source.fixAll.eslint"
+      ]
+    },
+}

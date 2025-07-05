@@ -8,9 +8,8 @@ describe('ChatMessageToolRequestComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ToolRequestChatMessageComponent]
-    })
-    .compileComponents();
+      imports: [ToolRequestChatMessageComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(ToolRequestChatMessageComponent);
     component = fixture.componentInstance;

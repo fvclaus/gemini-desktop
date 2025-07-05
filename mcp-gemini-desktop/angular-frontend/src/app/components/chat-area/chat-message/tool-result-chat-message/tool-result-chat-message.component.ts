@@ -9,7 +9,7 @@ import { ToolResultMessage } from '../../../../services/chat.service';
   standalone: true,
   imports: [CommonModule, MatCardModule, MatIconModule],
   templateUrl: './tool-result-chat-message.component.html',
-  styleUrl: './tool-result-chat-message.component.css'
+  styleUrl: './tool-result-chat-message.component.css',
 })
 export class ToolResultChatMessageComponent {
   @Input() message!: ToolResultMessage;

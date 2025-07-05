@@ -1,4 +1,10 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ChangeDetectorRef,
+  inject,
+} from '@angular/core';
 import { CommonModule, NgFor, NgIf } from '@angular/common';
 import { ServerItemComponent } from './server-item/server-item.component';
 import { MatListModule } from '@angular/material/list';
@@ -16,20 +22,18 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     NgIf,
     ServerItemComponent,
     MatListModule,
-    MatProgressSpinnerModule // Add MatProgressSpinnerModule
+    MatProgressSpinnerModule, // Add MatProgressSpinnerModule
   ],
   templateUrl: './server-list.component.html',
-  styleUrl: './server-list.component.css'
+  styleUrl: './server-list.component.css',
 })
 export class ServerListComponent implements OnInit, OnDestroy {
-  servers: McpServerStatus[] = [];
-  isLoading: boolean = true;
-  private mcpServersSubscription: Subscription | undefined;
+  private chatService = inject(ChatService);
+  private cdr = inject(ChangeDetectorRef);
 
-  constructor(
-    private chatService: ChatService,
-    private cdr: ChangeDetectorRef
-  ) {}
+  servers: McpServerStatus[] = [];
+  isLoading = true;
+  private mcpServersSubscription: Subscription | undefined;
 
   ngOnInit(): void {
     this.mcpServersSubscription = this.chatService.mcpServers$.subscribe(
@@ -37,7 +41,7 @@ export class ServerListComponent implements OnInit, OnDestroy {
         this.servers = servers;
         this.isLoading = false;
         this.cdr.detectChanges();
-      }
+      },
     );
   }
 

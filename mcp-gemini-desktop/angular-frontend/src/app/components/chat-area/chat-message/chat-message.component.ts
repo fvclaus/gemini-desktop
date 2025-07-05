@@ -26,7 +26,7 @@ import { ToolRequestChatMessageComponent } from './tool-request-chat-message/cha
     ToolRequestChatMessageComponent,
   ],
   templateUrl: './chat-message.component.html',
-  styleUrl: './chat-message.component.css'
+  styleUrl: './chat-message.component.css',
 })
 export class ChatMessageComponent {
   @Input() message!: Message;

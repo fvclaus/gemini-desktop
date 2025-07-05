@@ -8,7 +8,7 @@ import { LoadingMessage } from '../../../../services/chat.service';
   standalone: true,
   imports: [CommonModule, MatCardModule],
   templateUrl: './loading-chat-message.component.html',
-  styleUrl: './loading-chat-message.component.css'
+  styleUrl: './loading-chat-message.component.css',
 })
 export class LoadingChatMessageComponent {
   @Input() message!: LoadingMessage;

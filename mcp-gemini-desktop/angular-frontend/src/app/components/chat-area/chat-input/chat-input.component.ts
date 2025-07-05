@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { CommonModule } from '@angular/common';
 import { ModalService } from '../../../services/modal.service';
-import { MatDivider, MatDividerModule } from '@angular/material/divider';
+import { MatDividerModule } from '@angular/material/divider';
 import { SettingsService } from '../../../services/settings.service';
 
 @Component({
@@ -21,29 +21,35 @@ import { SettingsService } from '../../../services/settings.service';
     MatButtonModule,
     MatIconModule,
     TextFieldModule,
-    MatDividerModule
+    MatDividerModule,
   ],
   templateUrl: './chat-input.component.html',
-  styleUrl: './chat-input.component.css'
+  styleUrl: './chat-input.component.css',
 })
 export class ChatInputComponent {
+  private settingsService = inject(SettingsService);
+  private modalService = inject(ModalService);
+
   @Output() messageSent = new EventEmitter<string>();
-  messageText: string = '';
+  messageText = '';
   isModelDropdownOpen = false;
 
-  models: string[] = []
+  models: string[] = [];
   selectedModel: string | null = null;
 
-  constructor(
-    private settingsService: SettingsService,
-    private modalService: ModalService
-  ) {
+  constructor() {
+    const settingsService = this.settingsService;
+
     this.models = settingsService.getModels();
     this.selectedModel = settingsService.getModel();
   }
 
   sendMessageOnEnter(event: Event): void {
-    if (event instanceof KeyboardEvent && event.key === 'Enter' && !event.shiftKey) {
+    if (
+      event instanceof KeyboardEvent &&
+      event.key === 'Enter' &&
+      !event.shiftKey
+    ) {
       event.preventDefault();
       this.sendMessage();
     }

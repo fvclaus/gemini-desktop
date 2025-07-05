@@ -1,30 +1,29 @@
-import { McpServerState, McpServerStatus } from "../../src/shared/types";
+import { McpServerStatus } from '../../src/shared/types';
 
 declare global {
-
-  type ShowOpenDialogCanceledResponse = {
+  interface ShowOpenDialogCanceledResponse {
     canceled: true;
-  };
+  }
 
-  type ShowOpenDialogResponse = {
+  interface ShowOpenDialogResponse {
     canceled: false;
     path: string;
   }
 
-  type ShowOpenDialogFilter = {
+  interface ShowOpenDialogFilter {
     name: string;
-    extensions: string[]
+    extensions: string[];
   }
 
-  type ShowOpenDirectoryDialog = {
+  interface ShowOpenDirectoryDialog {
     title: string;
-    selectionType: 'directory',
+    selectionType: 'directory';
   }
 
-  type ShowOpenFileDialog = {
+  interface ShowOpenFileDialog {
     title: string;
-    selectionType: 'file',
-    filters:  ShowOpenDialogFilter[];
+    selectionType: 'file';
+    filters: ShowOpenDialogFilter[];
   }
 
   interface Window {
@@ -33,12 +32,20 @@ declare global {
       onWorkspaceSelected: (callback: (path: string | null) => void) => void;
       getSelectedWorkspace: () => Promise<string | null>;
       changeWorkspaceAndReload: () => Promise<string>;
-      showOpenDialog: (options: ShowOpenFileDialog | ShowOpenDirectoryDialog) => Promise<ShowOpenDialogCanceledResponse | ShowOpenDialogResponse>;
-      onMcpServerStatus: (callback: (servers: McpServerStatus[])=> void) => void;
+      showOpenDialog: (
+        options: ShowOpenFileDialog | ShowOpenDirectoryDialog,
+      ) => Promise<ShowOpenDialogCanceledResponse | ShowOpenDialogResponse>;
+      onMcpServerStatus: (
+        callback: (servers: McpServerStatus[]) => void,
+      ) => void;
       getMcpServers: () => Promise<McpServerStatus[]>;
-      callMcpTool: (serverName: string, toolName: string, params: any) => Promise<any>;
+      callMcpTool: (
+        serverName: string,
+        toolName: string,
+        params: unknown,
+      ) => Promise<unknown>;
       // Add any other electronAPI methods that might be used by services
-    }
+    };
   }
 }
 

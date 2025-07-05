@@ -9,7 +9,7 @@ import { ToolDecisionMessage } from '../../../../services/chat.service';
   standalone: true,
   imports: [CommonModule, MatCardModule, MatIconModule],
   templateUrl: './tool-decision-chat-message.component.html',
-  styleUrl: './tool-decision-chat-message.component.css'
+  styleUrl: './tool-decision-chat-message.component.css',
 })
 export class ToolDecisionChatMessageComponent {
   @Input() message!: ToolDecisionMessage;

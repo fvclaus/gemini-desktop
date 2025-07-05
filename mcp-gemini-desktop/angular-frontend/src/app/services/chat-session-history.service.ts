@@ -1,14 +1,12 @@
 import { Injectable } from '@angular/core';
 import { ChatSession } from './chat-session.interface';
-import { Message, UserMessage } from './chat.service';
+import { UserMessage } from './chat.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ChatSessionHistoryService {
   private readonly STORAGE_KEY = 'chat_session_history';
-
-  constructor() { }
 
   private getSessions(): ChatSession[] {
     const sessionsJson = localStorage.getItem(this.STORAGE_KEY);
@@ -24,7 +22,7 @@ export class ChatSessionHistoryService {
   }
 
   getSession(id: string): ChatSession | undefined {
-    return this.getSessions().find(session => session.id === id);
+    return this.getSessions().find((session) => session.id === id);
   }
 
   createSession(message: UserMessage): ChatSession {
@@ -32,7 +30,7 @@ export class ChatSessionHistoryService {
     const newSession: ChatSession = {
       id: `session-${Date.now()}`,
       startTime: new Date(),
-      messages: [message]
+      messages: [message],
     };
     sessions.push(newSession);
     this.saveSessions(sessions);
@@ -41,7 +39,9 @@ export class ChatSessionHistoryService {
 
   updateSession(updatedSession: ChatSession): void {
     const sessions = this.getSessions();
-    const index = sessions.findIndex(session => session.id === updatedSession.id);
+    const index = sessions.findIndex(
+      (session) => session.id === updatedSession.id,
+    );
     if (index !== -1) {
       sessions[index] = updatedSession;
       this.saveSessions(sessions);
@@ -50,7 +50,7 @@ export class ChatSessionHistoryService {
 
   deleteSession(id: string): void {
     let sessions = this.getSessions();
-    sessions = sessions.filter(session => session.id !== id);
+    sessions = sessions.filter((session) => session.id !== id);
     this.saveSessions(sessions);
   }
 }
