@@ -331,23 +331,6 @@ ipcMain.handle("call-mcp-tool", async (event, { serverName, toolName, params }) 
 });
 
 
-// Handler to read file content
-ipcMain.handle("read-file-content", async (event, filePath) => {
-  if (!filePath || typeof filePath !== 'string') {
-    throw new Error("Invalid file path provided.");
-  }
-  try {
-    // Basic security check: Ensure the path is within expected directories if needed
-    // For simplicity now, we just read the path given. Add validation if required.
-    console.log(`[read-file-content] Reading file: ${filePath}`);
-    const content = await fs.readFile(filePath, "utf-8");
-    return content;
-  } catch (error) {
-    console.error(`[read-file-content] Error reading file ${filePath}:`, error);
-    throw new Error(`Failed to read file: ${(error as Error).message}`);
-  }
-});
-
 
 ipcMain.handle("show-open-dialog", async (event, options) => {
   if (!mainWindow) {

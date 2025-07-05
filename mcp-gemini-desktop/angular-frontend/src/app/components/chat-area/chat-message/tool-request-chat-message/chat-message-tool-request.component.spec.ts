@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ChatMessageToolRequestComponent } from './chat-message-tool-request.component';
+import { ToolRequestChatMessageComponent } from './chat-message-tool-request.component';
 
 describe('ChatMessageToolRequestComponent', () => {
-  let component: ChatMessageToolRequestComponent;
-  let fixture: ComponentFixture<ChatMessageToolRequestComponent>;
+  let component: ToolRequestChatMessageComponent;
+  let fixture: ComponentFixture<ToolRequestChatMessageComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ChatMessageToolRequestComponent]
+      imports: [ToolRequestChatMessageComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(ChatMessageToolRequestComponent);
+    fixture = TestBed.createComponent(ToolRequestChatMessageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

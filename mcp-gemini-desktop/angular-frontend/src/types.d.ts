@@ -34,8 +34,6 @@ declare global {
       getSelectedWorkspace: () => Promise<string | null>;
       changeWorkspaceAndReload: () => Promise<string>;
       showOpenDialog: (options: ShowOpenFileDialog | ShowOpenDirectoryDialog) => Promise<ShowOpenDialogCanceledResponse | ShowOpenDialogResponse>;
-      readFileContent: (filePath: string) => Promise<string>;
-      onApiKeyUpdate: (callback: (result: { success: boolean; message?: string }) => void) => void;
       onMcpServerStatus: (callback: (servers: McpServerStatus[])=> void) => void;
       getMcpServers: () => Promise<McpServerStatus[]>;
       callMcpTool: (serverName: string, toolName: string, params: any) => Promise<any>;

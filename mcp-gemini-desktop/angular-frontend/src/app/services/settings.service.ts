@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 
+const STORAGE_API_KEY = 'api_key';
 @Injectable({
   providedIn: 'root'
 })
@@ -9,11 +10,11 @@ export class SettingsService {
   constructor() { }
 
   getApiKey(): string | null {
-    return localStorage.getItem('gemini-api-key');
+    return localStorage.getItem(STORAGE_API_KEY);
   }
 
   saveApiKey(apiKey: string): void {
-    localStorage.setItem('gemini-api-key', apiKey);
+    localStorage.setItem(STORAGE_API_KEY, apiKey);
   }
 
   getModels(): string[] {

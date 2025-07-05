@@ -1,33 +1,32 @@
-<div class="message-wrapper-material" [ngClass]="message?.sender">
+<div class="message-wrapper-material" [ngClass]="message.sender">
     <mat-card [ngClass]="{
-    'user-message-card': message?.sender === 'user',
-    'ai-message-card': message?.sender === 'ai',
-    'system-message-card': isSystemMessage()
+    'user-message-card': message.sender === 'user',
+    'ai-message-card': message.sender === 'ai',
+    'system-message-card': message.sender === 'system'
   }">
-        <!-- System Message / Tool Status -->
-        <mat-card-content *ngIf="isSystemMessage()">
-            <details class="message-details-material" [open]="isDetailsOpen()">
-                <summary class="message-summary-material" [style.color]="getSummaryColor()">
-                    <mat-icon>{{ getSummaryIconName() }}</mat-icon>
-                    {{ getSummaryText() }}
-                </summary>
-                <div class="message-details-content-material">
-                    @if(message.sender === 'system' && message.type ==='tool_request') {
-                        
-                        <app-chat-message-tool-request [message]="message"></app-chat-message-tool-request>
-                    }
-                    @else {
-                        <div>
-                            {{ getDetailsContent() }}
-                        </div>
-                    }
-                </div>
-            </details>
-        </mat-card-content>
-
-        <mat-card-content *ngIf="message.sender === 'ai' || message.sender === 'user'" class="message-content-material"
-            [innerHTML]="getFormattedContent()">
-            <!-- Content will be rendered here by [innerHTML] -->
-        </mat-card-content>
+        @switch (message.type) {
+            @case ('message') {
+                @if (message.sender === 'user') {
+                    <app-user-chat-message [message]="message"></app-user-chat-message>
+                } @else if (message.sender === 'ai') {
+                    <app-ai-message-chat-message [message]="message"></app-ai-message-chat-message>
+                }
+            }
+            @case ('loading') {
+                <app-loading-chat-message [message]="message"></app-loading-chat-message>
+            }
+            @case ('error') {
+                <app-system-error-chat-message [message]="message"></app-system-error-chat-message>
+            }
+            @case ('tool_decision') {
+                <app-tool-decision-chat-message [message]="message"></app-tool-decision-chat-message>
+            }
+            @case ('tool_request') {
+                <app-chat-message-tool-request [message]="message"></app-chat-message-tool-request>
+            }
+            @case ('tool_result') {
+                <app-tool-result-chat-message [message]="message"></app-tool-result-chat-message>
+            }
+        }
     </mat-card>
 </div>

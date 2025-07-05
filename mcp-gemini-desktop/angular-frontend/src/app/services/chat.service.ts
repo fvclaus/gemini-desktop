@@ -12,8 +12,9 @@ import { ChatSession } from './chat-session.interface';
 
 export interface UserMessage {
   id: string;
-  text: string;
   sender: 'user';
+  type: 'message';
+  text: string;
   timestamp: Date
 }
 
@@ -27,7 +28,7 @@ export interface LoadingMessage {
 export interface AiMessage {
   id: string,
   sender: 'ai',
-  type: 'text',
+  type: 'message',
   text: string,
   htmlContent: string,
   timestamp: Date,
@@ -35,27 +36,28 @@ export interface AiMessage {
 
 export interface SystemErrorMessage {
   id: string,
-  text: string,
   sender: 'system',
   type: 'error',
+  text: string,
   details?: string,
+  showDetails?: boolean,
   timestamp: Date,
 }
 
-export interface SystemLogMessage {
+export interface ToolDecisionMessage {
   id: string,
-  text: string,
-  sender: 'system',
-  type: 'log',
-  timestamp: Date,
+  sender: 'user';
+  type: 'tool_decision';
+  approval: 'approved' | 'rejected';
+  timestamp: Date;
 }
 
 export interface ToolRequestMessage {
   id: string;
-  sender: 'system',
+  sender: 'ai',
   type: 'tool_request',
-  text: string,
-  tool_calls: any[],
+  tools: {name: string; args?: Record<string, unknown>}[],
+  showRequestedTools?: boolean,
   timestamp: Date,
 }
 
@@ -63,12 +65,13 @@ export interface ToolResultMessage {
   id: string;
   sender: 'system',
   type: 'tool_result',
-  text: string,
+  tool: {name: string; args?: Record<string, unknown>},
   details: string,
+  showToolResults?: boolean,
   timestamp: Date,
 }
 
-export type Message = UserMessage | LoadingMessage | SystemErrorMessage | SystemLogMessage | AiMessage | ToolRequestMessage | ToolResultMessage;
+export type Message = UserMessage | LoadingMessage | SystemErrorMessage |  AiMessage | ToolRequestMessage | ToolResultMessage | ToolDecisionMessage;
 
 
 @Injectable({
@@ -116,9 +119,9 @@ export class ChatService {
       console.error('API key is not set.');
       this.addMessageHelper({
         id: 'init-error',
-        text: 'API Key is not configured. Please set it in the settings.',
         sender: 'system',
         type: 'error',
+        text: 'API Key is not configured. Please set it in the settings.',
         timestamp: new Date()
       });
       return;
@@ -227,6 +230,7 @@ export class ChatService {
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
+      type: 'message',
       text: messageText,
       sender: 'user',
       timestamp: new Date()
@@ -287,10 +291,10 @@ export class ChatService {
     if (functionCalls && functionCalls.length > 0) {
       const toolRequestMessage: Message = {
         id: this.generateId(),
-        sender: 'system',
+        sender: 'ai',
         type: 'tool_request',
-        text: 'The model wants to call the following tool(s):',
-        tool_calls: functionCalls,
+        showRequestedTools: true,
+        tools: functionCalls as {name: string, args?: Record<string, unknown>}[],
         timestamp: new Date(),
       };
       this.addMessageHelper(toolRequestMessage);
@@ -304,7 +308,7 @@ export class ChatService {
       const aiMessage: Message = {
         id: this.generateId(),
         sender: 'ai',
-        type: 'text',
+        type: 'message',
         text: text,
         htmlContent: this.processAiMessageContent(text),
         timestamp: new Date(),
@@ -314,22 +318,23 @@ export class ChatService {
     }
   }
 
-  async sendToolResponse(approved: boolean, toolCall: FunctionCall): Promise<void> {
+  async sendToolResponse(approved: boolean, toolCall: FunctionCall[]): Promise<void> {
 
     this.addMessageHelper({
       id: this.generateId(),
-      text: `User ${approved ? 'approved' : 'denied'} tool call: ${toolCall.name}`,
-      sender: 'system',
-      type: 'log',
+      sender: 'user',
+      type: 'tool_decision',
+      approval: approved? 'approved' : 'rejected',
       timestamp: new Date()
     });
 
     let toolResponsePart: Part;
     if (approved) {
-      const toolResult = await window.electronAPI.callMcpTool(toolCall.id!, toolCall.name!, toolCall.args);
+      // TODO Support more than one tool call
+      const toolResult = await window.electronAPI.callMcpTool(toolCall[0].id!, toolCall[0].name!, toolCall[0].args);
       toolResponsePart = {
         functionResponse: {
-          name: toolCall.name,
+          name: toolCall[0].name,
           response: toolResult,
         },
       };
@@ -337,25 +342,17 @@ export class ChatService {
         id: this.generateId(),
         sender: 'system',
         type: 'tool_result',
-        text: `Tool ${toolCall.name} finished with status: Success`,
+        tool: {name: toolCall[0].name!, args: toolCall[0].args},
         details: toolResult.result,
         timestamp: new Date(),
       });
     } else {
       toolResponsePart = {
         functionResponse: {
-          name: toolCall.name,
+          name: toolCall[0].name,
           response: { result: "User denied the tool call." },
         },
       };
-      this.addMessageHelper({
-        id: this.generateId(),
-        sender: 'system',
-        type: 'tool_result',
-        text: `Tool ${toolCall.name} finished with status: Denied`,
-        details: "User denied the tool call.",
-        timestamp: new Date(),
-      });
     }
 
     this.chatHistory.push({ role: 'function', parts: [toolResponsePart] });
@@ -395,7 +392,7 @@ export class ChatService {
     if (session) {
       this.activeSession = session;
       this.chatHistory = session.messages.reduce((messages, m) => {
-        if (m.sender === 'ai' && m.type === 'loading') {
+        if (m.type === 'loading' || m.type === 'tool_decision' || m.type === 'tool_request' || m.type === 'tool_result' || m.type === 'error') {
           return messages;
         }
         messages.push({
@@ -412,13 +409,6 @@ export class ChatService {
 
   public setModel(modelName: string): void {
     this.modelName = modelName;
-    this.addMessageHelper({
-      id: this.generateId(),
-      text: `Model switched to ${modelName}. The chat history has been cleared.`,
-      sender: 'system',
-      type: 'log',
-      timestamp: new Date()
-    });
     this.chatHistory = [];
     this.messagesSubject.next([]); // Clear messages
     this.initializeApp(); // Re-initialize with the new model

@@ -1,7 +1,6 @@
 import {contextBridge, ipcRenderer} from "electron";
 
 contextBridge.exposeInMainWorld("electronAPI", {
-  readFileContent: (filePath) => ipcRenderer.invoke("read-file-content", filePath),
   showOpenDialog: (options) => ipcRenderer.invoke("show-open-dialog", options),
 
   changeWorkspaceAndReload: () => ipcRenderer.invoke("change-workspace-and-reload"),
@@ -13,11 +12,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("workspace-selected", handler);
     // return () => ipcRenderer.removeListener("workspace-selected", handler);
   },
-
-  onApiKeyUpdate: (callback) =>
-    ipcRenderer.on("api-key-update-status", (event, ...args) =>
-      callback(...args)
-    ),
   setModel: (modelName) => ipcRenderer.invoke("set-model", modelName),
   onModelUpdateStatus: (callback) =>
     ipcRenderer.on("model-update-status", (event, ...args) => callback(...args)),

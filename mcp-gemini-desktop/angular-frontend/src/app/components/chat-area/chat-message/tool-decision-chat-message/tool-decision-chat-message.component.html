@@ -1,0 +1,10 @@
+<mat-card-content>
+    <mat-icon>build</mat-icon>
+    @if (message.approval === 'approved') {
+        Approved
+        <mat-icon>check_circle_outline</mat-icon>
+    } @else {
+        Rejected
+        <mat-icon>cancel</mat-icon>
+    }
+</mat-card-content>
