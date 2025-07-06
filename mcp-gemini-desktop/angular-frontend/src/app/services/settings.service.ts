@@ -3,6 +3,7 @@ import { BehaviorSubject } from 'rxjs';
 import { Profile } from './profile.interface';
 
 const PROFILES_STORAGE_KEY = 'gemini-desktop-profiles';
+const SKIP_DELETE_CONFIRMATION_KEY = 'skip_delete_confirmation';
 
 export interface GeminiModel {
   name: string;
@@ -106,5 +107,14 @@ export class SettingsService {
       throw new Error('IllegalState: Profile should be defined');
     }
     return profile;
+  }
+
+  getSkipDeleteConfirmation(): boolean {
+    const skip = localStorage.getItem(SKIP_DELETE_CONFIRMATION_KEY);
+    return skip === 'true';
+  }
+
+  setSkipDeleteConfirmation(skip: boolean): void {
+    localStorage.setItem(SKIP_DELETE_CONFIRMATION_KEY, String(skip));
   }
 }

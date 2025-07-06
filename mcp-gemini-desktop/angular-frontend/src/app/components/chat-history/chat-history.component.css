@@ -1,5 +1,12 @@
 .chat-history-container {
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat-history-list {
+  flex-grow: 1;
+  overflow-y: auto;
 }
 
 mat-list-item {
@@ -7,8 +14,26 @@ mat-list-item {
   margin-bottom: 10px;
   border-radius: 5px;
   transition: background-color 0.3s;
+  position: relative;
 }
 
 mat-list-item:hover {
   background-color: #f0f0f0;
+}
+
+.delete-button {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  visibility: hidden;
+}
+
+mat-list-item:hover .delete-button {
+  visibility: visible;
+}
+
+.chat-history-actions {
+  flex-shrink: 0;
+  padding: 8px 16px;
 }

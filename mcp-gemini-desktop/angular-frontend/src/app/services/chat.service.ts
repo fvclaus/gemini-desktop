@@ -461,4 +461,8 @@ export class ChatService {
       this.messagesSubject.next(session.messages);
     }
   }
+
+  public getActiveSession(): ChatSession | null {
+    return this.activeSession;
+  }
 }

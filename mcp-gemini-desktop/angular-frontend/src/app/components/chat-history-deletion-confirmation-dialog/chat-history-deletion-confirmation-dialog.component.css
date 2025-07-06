@@ -1,0 +1,7 @@
+mat-dialog-actions {
+  justify-content: flex-end;
+}
+
+mat-checkbox {
+  margin-top: 16px;
+}
