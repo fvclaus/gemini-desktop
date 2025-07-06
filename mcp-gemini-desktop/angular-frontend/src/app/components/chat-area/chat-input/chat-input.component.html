@@ -10,25 +10,7 @@
   </div>
 
   <div class="input-toolbar">
-    <div class="model-selector">
-      <button mat-button class="model-selector-button" (click)="toggleModelDropdown()">
-        <mat-icon>model_training</mat-icon>
-        <span>{{ selectedModel || 'Select Model' }}</span>
-        <mat-icon>arrow_drop_up</mat-icon>
-      </button>
-      <div class="model-dropdown" [class.open]="isModelDropdownOpen">
-        <ng-container>
-          <button *ngFor="let model of models" mat-menu-item (click)="selectModel(model)">
-            {{ model }}
-          </button>
-        </ng-container>
-        <mat-divider></mat-divider>
-        <button mat-menu-item (click)="editSettings()">
-          <mat-icon>edit</mat-icon>
-          <span>Edit Models</span>
-        </button>
-      </div>
-    </div>
+    <app-profile-selector></app-profile-selector>
     <div class="toolbar-actions">
       <button mat-icon-button color="primary" id="send-btn-material" (click)="sendMessage()"
         [disabled]="!messageText.trim()">

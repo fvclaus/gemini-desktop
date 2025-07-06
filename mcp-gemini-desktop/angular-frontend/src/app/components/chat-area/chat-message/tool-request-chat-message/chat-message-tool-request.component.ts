@@ -1,10 +1,7 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import {
-  ChatService,
-  ToolRequestMessage,
-} from '../../../../services/chat.service';
+import { ToolRequestMessage } from '../../../../services/chat.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatIcon } from '@angular/material/icon';
 
@@ -16,15 +13,15 @@ import { MatIcon } from '@angular/material/icon';
   styleUrl: './chat-message-tool-request.component.css',
 })
 export class ToolRequestChatMessageComponent {
-  private chatService = inject(ChatService);
-
   @Input() message!: ToolRequestMessage;
+  @Output() toolResponse = new EventEmitter<{
+    message: ToolRequestMessage;
+    approved: boolean;
+  }>();
 
   onToolResponse(approved: boolean): void {
-    if (this.message) {
-      this.chatService.sendToolResponse(approved, this.message.tools);
-      // TODO persist this somehow
-      this.message.showRequestedTools = false;
-    }
+    // TODO persist this somehow
+    this.message.showRequestedTools = false;
+    this.toolResponse.emit({ message: this.message, approved });
   }
 }

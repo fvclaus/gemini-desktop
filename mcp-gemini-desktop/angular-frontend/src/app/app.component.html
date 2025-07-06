@@ -11,11 +11,7 @@
 </div>
     <app-sidebar></app-sidebar>
   </mat-sidenav>
-  <mat-sidenav-content class="chat-area-container">
+  <mat-sidenav-content class="chat-area-container" *ngIf="showChatArea">
     <app-chat-area></app-chat-area>
   </mat-sidenav-content>
 </mat-sidenav-container>
-
-<app-settings-modal modalId="settings-modal">
-  <app-settings></app-settings>
-</app-settings-modal>

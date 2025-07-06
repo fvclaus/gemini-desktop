@@ -12,6 +12,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { ReactiveFormsModule } from '@angular/forms';
 import { FormlyModule, FormlyFieldConfig } from '@ngx-formly/core';
 import { FormlyMaterialModule } from '@ngx-formly/material';
+import { MatDialogModule } from '@angular/material/dialog';
 
 import { routes } from './app.routes';
 import { ArrayTypeComponent } from './formly-types/array.type';
@@ -134,6 +135,7 @@ export const appConfig: ApplicationConfig = {
         ],
       }),
       FormlyMaterialModule,
+      MatDialogModule,
     ),
   ],
 };

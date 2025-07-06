@@ -1,13 +1,13 @@
 <mat-card-content>
+    <summary class="message-summary-material" [style.color]="'var(--status-error)'">
+        <mat-icon>warning_amber</mat-icon>
+        {{message.text}}
+    </summary>
+    @if (message.details) {
     <details class="message-details-material" [open]="!!message.showDetails">
-        <summary class="message-summary-material" [style.color]="'var(--status-error)'">
-            <mat-icon>warning_amber</mat-icon>
-            System Error
-        </summary>
-        @if (message.details) {
             <div class="message-details-content-material">
                 {{ message.details }}
             </div>
-        }
-    </details>
+        </details>
+    }
 </mat-card-content>

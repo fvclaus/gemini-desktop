@@ -3,14 +3,10 @@ import { CommonModule, NgFor } from '@angular/common';
 import { ChatMessageComponent } from './chat-message/chat-message.component';
 import { ChatInputComponent } from './chat-input/chat-input.component';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { ChatService } from '../../services/chat.service'; // Import ChatService
+import { ChatService, ToolRequestMessage } from '../../services/chat.service'; // Import ChatService
 import { Message } from '../../services/chat.service'; // Import Message from ChatService or a shared types file
 import { Subscription } from 'rxjs';
-
-// Message interface is now likely in ChatService or a shared types file.
-// If Message is directly from ChatService, the export below can be removed if not strictly needed
-// by other components that *only* have access to ChatAreaComponent's exports.
-export type { Message }; // Re-export if needed by template or other components directly using ChatAreaComponent's Message type
+import { SettingsService } from '../../services/settings.service';
 
 @Component({
   selector: 'app-chat-area',
@@ -27,6 +23,7 @@ export type { Message }; // Re-export if needed by template or other components 
 })
 export class ChatAreaComponent implements OnInit, OnDestroy {
   private chatService = inject(ChatService);
+  private settingsService = inject(SettingsService);
 
   messages: Message[] = [];
   private messagesSubscription: Subscription | undefined;
@@ -40,9 +37,22 @@ export class ChatAreaComponent implements OnInit, OnDestroy {
   }
 
   handleMessageSent(messageText: string): void {
+    const profile = this.settingsService.getActiveProfile();
     if (messageText && messageText.trim().length > 0) {
-      this.chatService.sendMessage(messageText);
+      this.chatService.sendMessage(profile, messageText);
     }
+  }
+
+  handleToolResponse(event: {
+    message: ToolRequestMessage;
+    approved: boolean;
+  }) {
+    const profile = this.settingsService.getActiveProfile();
+    this.chatService.sendToolResponse(
+      profile,
+      event.approved,
+      event.message.tools,
+    );
   }
 
   ngOnDestroy(): void {

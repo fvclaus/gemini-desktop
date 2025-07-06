@@ -43,7 +43,7 @@ declare global {
         serverName: string,
         toolName: string,
         params: unknown,
-      ) => Promise<unknown>;
+      ) => Promise<Record<string, unknown>>;
       // Add any other electronAPI methods that might be used by services
     };
   }

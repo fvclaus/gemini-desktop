@@ -22,7 +22,7 @@
                 <app-tool-decision-chat-message [message]="message"></app-tool-decision-chat-message>
             }
             @case ('tool_request') {
-                <app-chat-message-tool-request [message]="message"></app-chat-message-tool-request>
+                <app-chat-message-tool-request [message]="message" (toolResponse)="handleToolResponse($event)"></app-chat-message-tool-request>
             }
             @case ('tool_result') {
                 <app-tool-result-chat-message [message]="message"></app-tool-result-chat-message>

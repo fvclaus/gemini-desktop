@@ -10,7 +10,10 @@
 
     <div id="chat-messages-material" class="chat-messages-container">
         <!-- Messages will appear here, eventually using *ngFor with app-chat-message -->
-        <app-chat-message *ngFor="let message of messages" [message]="message" [attr.data-test-id]="message.id"></app-chat-message>
+        <app-chat-message *ngFor="let message of messages"
+                          [message]="message"
+                          [attr.data-test-id]="message.id"
+                          (toolResponse)="handleToolResponse($event)"></app-chat-message>
     </div>
 
     <app-chat-input (messageSent)="handleMessageSent($event)"></app-chat-input>

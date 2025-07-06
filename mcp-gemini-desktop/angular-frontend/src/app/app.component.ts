@@ -1,4 +1,4 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { ChatAreaComponent } from './components/chat-area/chat-area.component';
@@ -6,9 +6,10 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { WorkspaceComponent } from './components/sidebar/workspace/workspace.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIcon } from '@angular/material/icon';
-import { SettingsModalComponent } from './components/settings-modal/settings-modal.component';
-import { SettingsComponent } from './components/settings/settings.component';
+import { SettingsService } from './services/settings.service';
+import { Subscription } from 'rxjs';
+import { MatDialog } from '@angular/material/dialog';
+import { SettingsDialogComponent } from './components/settings-dialog/settings-dialog.component';
 
 @Component({
   selector: 'app-root',
@@ -21,18 +22,33 @@ import { SettingsComponent } from './components/settings/settings.component';
     WorkspaceComponent,
     MatProgressSpinnerModule,
     MatButtonModule,
-    MatIcon,
-    SettingsModalComponent,
-    SettingsComponent,
+    SettingsDialogComponent,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
+  private settingsService = inject(SettingsService);
+  private dialog = inject(MatDialog);
+
   title = 'GemCP Chat';
+  showChatArea = false;
+  private activeProfileSubscription: Subscription | undefined;
 
   readonly sidenavMinWidth = 250;
   readonly sidenavMaxWidth = window.innerWidth - 300;
+
+  ngOnInit(): void {
+    this.activeProfileSubscription =
+      this.settingsService.activeProfile$.subscribe((profile) => {
+        this.showChatArea = !!profile;
+        if (!profile) {
+          this.dialog.open(SettingsDialogComponent, { data: null });
+        } else {
+          // Dialog is self-closing, no need to explicitly close here
+        }
+      });
+  }
 
   get sidenavWidth(): number {
     return parseInt(

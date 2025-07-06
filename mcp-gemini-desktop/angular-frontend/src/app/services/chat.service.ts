@@ -13,6 +13,7 @@ import { SettingsService } from './settings.service';
 import { McpServerStatus } from '../../../../src/shared/types';
 import { ChatSessionHistoryService } from './chat-session-history.service';
 import { ChatSession } from './chat-session.interface';
+import { Profile } from './profile.interface';
 
 // Electron API types are now expected to be globally available via types.d.ts
 
@@ -72,7 +73,7 @@ export interface ToolResultMessage {
   sender: 'system';
   type: 'tool_result';
   tool: { name: string; args?: Record<string, unknown> };
-  details: string;
+  result: Record<string, unknown>;
   showToolResults?: boolean;
   timestamp: Date;
 }
@@ -94,9 +95,6 @@ export class ChatService {
   private settingsService = inject(SettingsService);
   private chatHistoryService = inject(ChatSessionHistoryService);
 
-  private genAI!: GoogleGenAI;
-  private apiKey: string | null = null;
-  private modelName = 'gemini-2.5-pro-preview-05-06'; // Default model
   private chatHistory: Content[] = [];
   private activeSession: ChatSession | null = null;
 
@@ -108,9 +106,6 @@ export class ChatService {
     this.mcpServersSubject.asObservable();
 
   constructor() {
-    this.apiKey = this.settingsService.getApiKey();
-    this.initializeApp();
-
     window.electronAPI.onMcpServerStatus((statuses) => {
       this.ngZone.run(() => {
         console.log('MCP servers changed', statuses);
@@ -126,21 +121,9 @@ export class ChatService {
     });
   }
 
-  private async initializeApp(): Promise<void> {
-    if (!this.apiKey) {
-      console.error('API key is not set.');
-      this.addMessageHelper({
-        id: 'init-error',
-        sender: 'system',
-        type: 'error',
-        text: 'API Key is not configured. Please set it in the settings.',
-        timestamp: new Date(),
-      });
-      return;
-    }
-
+  private initializeGenAI(profile: Profile): GoogleGenAI {
     try {
-      this.genAI = new GoogleGenAI({ apiKey: this.apiKey });
+      return new GoogleGenAI({ apiKey: profile.apiKey });
       console.log('Gemini client initialized successfully.');
     } catch (error) {
       console.error('Error initializing Gemini client:', error);
@@ -152,6 +135,7 @@ export class ChatService {
         details: error instanceof Error ? error.message : String(error),
         timestamp: new Date(),
       });
+      throw error;
     }
   }
 
@@ -240,20 +224,16 @@ export class ChatService {
     }
   }
 
-  async sendMessage(messageText: string): Promise<void> {
-    if (!messageText.trim()) return;
+  async sendMessage(profile: Profile, messageText: string): Promise<void> {
+    const genAI = this.initializeGenAI(profile);
 
-    // TODO Prevent submit and remove code
-    if (!this.genAI) {
-      this.addMessageHelper({
-        id: 'init-error',
-        text: 'Error: Chat session not initialized. Please check your API key.',
-        sender: 'system',
-        type: 'error',
-        timestamp: new Date(),
-      });
-      return;
-    }
+    // this.addMessageHelper({
+    //   id: 'init-error',
+    //   text: 'Error: Chat session not initialized. Please check your API key.',
+    //   sender: 'system',
+    //   type: 'error',
+    //   timestamp: new Date(),
+    // });
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -274,15 +254,17 @@ export class ChatService {
     });
 
     try {
-      const result = await this.genAI.models.generateContent({
-        model: this.modelName,
+      const result = await genAI.models.generateContent({
+        model: profile.model,
         contents: this.chatHistory,
+
         config: {
           tools: this.mcpServersSubject
             .getValue()
             .filter((mcpServer) => mcpServer.state === 'STARTED')
             .map((mcpServer) => {
               return {
+                // TODO Check with other mcp
                 functionDeclarations: mcpServer.tools.map((t) => ({
                   name: t.name,
                   description: t.description,
@@ -290,6 +272,12 @@ export class ChatService {
                 })),
               };
             }),
+          systemInstruction: profile.systemPrompt
+            ? {
+                role: 'system',
+                parts: [{ text: profile.systemPrompt }],
+              }
+            : undefined,
         },
       });
       this.handleGeminiResponse(loadingMessageId, result);
@@ -365,6 +353,7 @@ export class ChatService {
   }
 
   async sendToolResponse(
+    profile: Profile,
     approved: boolean,
     toolCall: FunctionCall[],
   ): Promise<void> {
@@ -375,6 +364,8 @@ export class ChatService {
       approval: approved ? 'approved' : 'rejected',
       timestamp: new Date(),
     });
+
+    const genAI = this.initializeGenAI(profile);
 
     let toolResponsePart: Part;
     if (approved) {
@@ -395,7 +386,7 @@ export class ChatService {
         sender: 'system',
         type: 'tool_result',
         tool: { name: toolCall[0].name!, args: toolCall[0].args },
-        details: toolResult.result,
+        result: toolResult,
         timestamp: new Date(),
       });
     } else {
@@ -418,8 +409,8 @@ export class ChatService {
     });
 
     try {
-      const result = await this.genAI.models.generateContent({
-        model: this.modelName,
+      const result = await genAI.models.generateContent({
+        model: profile.model,
         contents: this.chatHistory,
       });
       this.handleGeminiResponse(loadingMessageId, result);
@@ -469,12 +460,5 @@ export class ChatService {
       }, [] as Content[]);
       this.messagesSubject.next(session.messages);
     }
-  }
-
-  public setModel(modelName: string): void {
-    this.modelName = modelName;
-    this.chatHistory = [];
-    this.messagesSubject.next([]); // Clear messages
-    this.initializeApp(); // Re-initialize with the new model
   }
 }

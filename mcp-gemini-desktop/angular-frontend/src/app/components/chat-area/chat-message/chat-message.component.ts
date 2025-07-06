@@ -1,6 +1,6 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule, NgClass } from '@angular/common';
-import { Message } from '../../../services/chat.service';
+import { Message, ToolRequestMessage } from '../../../services/chat.service';
 import { MatCardModule } from '@angular/material/card';
 import { UserChatMessageComponent } from './user-chat-message/user-chat-message.component';
 import { AiMessageChatMessageComponent } from './ai-message-chat-message/ai-message-chat-message.component';
@@ -30,4 +30,15 @@ import { ToolRequestChatMessageComponent } from './tool-request-chat-message/cha
 })
 export class ChatMessageComponent {
   @Input() message!: Message;
+  @Output() toolResponse = new EventEmitter<{
+    message: ToolRequestMessage;
+    approved: boolean;
+  }>();
+
+  handleToolResponse(event: {
+    message: ToolRequestMessage;
+    approved: boolean;
+  }) {
+    this.toolResponse.emit(event);
+  }
 }

@@ -1,0 +1,22 @@
+<div class="profile-selector">
+  <button mat-button [matMenuTriggerFor]="profileMenu" class="profile-selector-button">
+    <mat-icon>account_circle</mat-icon>
+    <span>{{ (activeProfile$ | async)?.name || 'Select Profile' }}</span>
+    <mat-icon>arrow_drop_down</mat-icon>
+  </button>
+  <mat-menu #profileMenu="matMenu">
+    <ng-container *ngIf="(profiles$ | async) as profiles">
+      <button mat-menu-item *ngFor="let profile of profiles | sortProfiles" (click)="selectProfile(profile)">
+        <span>{{ profile.name }}</span>
+        <button mat-icon-button (click)="editProfile(profile, $event)">
+          <mat-icon>settings</mat-icon>
+        </button>
+      </button>
+    </ng-container>
+    <mat-divider></mat-divider>
+    <button mat-menu-item (click)="addProfile()">
+      <mat-icon>add</mat-icon>
+      <span>Add Profile</span>
+    </button>
+  </mat-menu>
+</div>

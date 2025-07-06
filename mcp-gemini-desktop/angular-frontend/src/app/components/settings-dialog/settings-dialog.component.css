@@ -1,0 +1,87 @@
+.settings-container {
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 0.9em;
+  color: var(--text-primary);
+}
+
+input[type="password"],
+select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: 0.95em;
+  background-color: var(--chat-bg);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type="password"]:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(107, 90, 72, 0.2);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* Angular Material overrides for consistency */
+.mat-mdc-form-field {
+  width: 100%;
+}
+
+.mat-mdc-text-field-wrapper {
+  background-color: var(--chat-bg) !important;
+}
+
+.mat-mdc-form-field-flex .mat-mdc-form-field-infix {
+  padding: 10px 0 !important;
+}
+
+.mat-mdc-form-field-subscript-wrapper {
+  display: none; /* Hide default Angular Material hint/error space */
+}
+
+.mat-mdc-select-value {
+  color: var(--text-primary) !important;
+}
+
+.mat-mdc-select-arrow {
+  color: var(--text-secondary) !important;
+}
+
+.mat-mdc-option {
+  color: var(--text-primary) !important;
+}
+
+.mat-mdc-option.mdc-list-item--selected:not(.mdc-list-item--disabled) .mdc-list-item__primary-text {
+  color: var(--accent-color) !important;
+}
+
+.mat-mdc-option.mdc-list-item--selected:not(.mdc-list-item--disabled) {
+  background-color: rgba(var(--accent-color-rgb), 0.1) !important;
+}
+
+.mat-mdc-button.mat-warn {
+  color: var(--warn-color);
+}
+
+.mat-mdc-button.mat-warn:hover {
+  background-color: rgba(var(--warn-color-rgb), 0.1);
+}

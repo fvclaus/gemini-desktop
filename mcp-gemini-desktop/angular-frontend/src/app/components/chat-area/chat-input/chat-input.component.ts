@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -6,9 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TextFieldModule } from '@angular/cdk/text-field';
 import { CommonModule } from '@angular/common';
-import { ModalService } from '../../../services/modal.service';
 import { MatDividerModule } from '@angular/material/divider';
-import { SettingsService } from '../../../services/settings.service';
+import { ProfileSelectorComponent } from '../../profile-selector/profile-selector.component';
 
 @Component({
   selector: 'app-chat-input',
@@ -22,28 +21,14 @@ import { SettingsService } from '../../../services/settings.service';
     MatIconModule,
     TextFieldModule,
     MatDividerModule,
+    ProfileSelectorComponent,
   ],
   templateUrl: './chat-input.component.html',
   styleUrl: './chat-input.component.css',
 })
 export class ChatInputComponent {
-  private settingsService = inject(SettingsService);
-  private modalService = inject(ModalService);
-
   @Output() messageSent = new EventEmitter<string>();
   messageText = '';
-  isModelDropdownOpen = false;
-
-  models: string[] = [];
-  selectedModel: string | null = null;
-
-  constructor() {
-    const settingsService = this.settingsService;
-
-    this.models = settingsService.getModels();
-    this.selectedModel = settingsService.getModel();
-  }
-
   sendMessageOnEnter(event: Event): void {
     if (
       event instanceof KeyboardEvent &&
@@ -60,18 +45,5 @@ export class ChatInputComponent {
       this.messageSent.emit(this.messageText.trim());
       this.messageText = '';
     }
-  }
-
-  toggleModelDropdown(): void {
-    this.isModelDropdownOpen = !this.isModelDropdownOpen;
-  }
-
-  selectModel(modelName: string): void {
-    this.settingsService.setModel(modelName);
-    this.isModelDropdownOpen = false;
-  }
-
-  editSettings(): void {
-    this.modalService.open('settings-modal');
   }
 }
