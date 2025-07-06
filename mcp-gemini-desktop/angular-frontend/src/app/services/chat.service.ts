@@ -376,8 +376,10 @@ export class ChatService {
     if (approved) {
       try {
         // TODO Support more than one tool call
+        // TODO Support passing id if it was requested
         const toolResult = await window.electronAPI.callMcpTool(
-          toolCall[0].id!,
+          // TODO Must provide server name here
+          toolCall[0].name!,
           toolCall[0].name!,
           toolCall[0].args,
         );
