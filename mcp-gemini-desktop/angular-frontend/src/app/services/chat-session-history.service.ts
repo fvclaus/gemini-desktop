@@ -1,20 +1,59 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { ChatSession } from './chat-session.interface';
-import { UserMessage } from './chat.service';
+import { AiMessage, ToolRequestMessage, UserMessage } from './chat.service';
+import { SettingsService } from './settings.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ChatSessionHistoryService {
   private readonly STORAGE_KEY = 'chat_session_history';
+  private settingsService = inject(SettingsService);
 
   private getSessions(): ChatSession[] {
     const sessionsJson = localStorage.getItem(this.STORAGE_KEY);
-    return sessionsJson ? JSON.parse(sessionsJson) : [];
+    if (!sessionsJson) {
+      return [];
+    }
+    const sessions: ChatSession[] = JSON.parse(sessionsJson);
+    // Re-hydrate model instances
+    sessions.forEach((session) => {
+      session.messages.forEach((message) => {
+        if (
+          message.sender === 'ai' &&
+          (message.type === 'message' || message.type === 'tool_request')
+        ) {
+          const aiMessage = message as AiMessage | ToolRequestMessage;
+          aiMessage.modelInstance = this.settingsService.getGeminiModel(
+            aiMessage.model.name,
+          );
+        }
+      });
+    });
+    return sessions;
   }
 
   private saveSessions(sessions: ChatSession[]): void {
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sessions));
+    const serializableSessions = sessions.map((session) => {
+      const serializableMessages = session.messages.map((message) => {
+        if (
+          message.sender === 'ai' &&
+          (message.type === 'message' || message.type === 'tool_request')
+        ) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { modelInstance, ...rest } = message as
+            | AiMessage
+            | ToolRequestMessage;
+          return rest;
+        }
+        return message;
+      });
+      return { ...session, messages: serializableMessages };
+    });
+    localStorage.setItem(
+      this.STORAGE_KEY,
+      JSON.stringify(serializableSessions),
+    );
   }
 
   getAllSessions(): ChatSession[] {

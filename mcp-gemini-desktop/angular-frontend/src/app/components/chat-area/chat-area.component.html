@@ -1,12 +1,14 @@
 <div class="chat-area-material-wrapper"> <!-- Wrapper for overall chat area -->
-    <mat-toolbar class="chat-header-material">
-        <div class="chat-header-content">
-            <h1>GemCP Chat</h1>
-            <p class="subtitle">
-                Supercharge your Gemini with your own MCP servers
-            </p>
-        </div>
-    </mat-toolbar>
+    <div class="chat-header-content">
+        <span class="m-auto">
+            {{ totalTokensUsed | number:'1.0-0' }}k
+        </span>
+        <mat-progress-bar mode="determinate" [value]="(totalTokensUsed / inputTokenLimit) * 100"></mat-progress-bar>
+        <span>{{ inputTokenLimit | number:'1.0-0' }}k</span>
+        <mat-chip-listbox>
+            <mat-chip>{{ totalCost | currency:'USD':'symbol':'1.2-2' }}</mat-chip>
+        </mat-chip-listbox>
+    </div>
 
     <div id="chat-messages-material" class="chat-messages-container">
         <!-- Messages will appear here, eventually using *ngFor with app-chat-message -->

@@ -1,9 +1,8 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import {
-  GEMINI_2_5_FLASH,
-  GEMINI_PRO_2_5_PREVIEW_05_06,
   SettingsService,
+  GEMINI_MODELS,
 } from '../../services/settings.service';
 import { CommonModule } from '@angular/common';
 import {
@@ -63,7 +62,7 @@ export class SettingsDialogComponent implements OnInit {
         label: 'Model',
         placeholder: 'Select a model',
         required: true,
-        options: [GEMINI_2_5_FLASH, GEMINI_PRO_2_5_PREVIEW_05_06].map((m) => ({
+        options: GEMINI_MODELS.map((m) => ({
           value: m.name,
           label: m.label,
         })),

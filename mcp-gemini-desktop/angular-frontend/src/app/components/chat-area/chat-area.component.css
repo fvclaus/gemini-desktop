@@ -19,19 +19,13 @@
   /* Material theme handles background, text color, and border */
 }
 .chat-header-content {
-  text-align: center;
-  width: 100%;
+  width: calc(100% - 2 * 10px);
+  padding:10px;
+  border-bottom: 1px solid black;
+  display: flex;
+  flex-direction: row;
 }
-.chat-header-content h1 {
-  font-weight: 500; /* Material's medium weight for titles */
-  margin: 0 0 2px 0; /* Minimal margin */
-  font-size: 1.25rem; /* Adjust as per Material typography scale if needed */
-}
-.chat-header-content .subtitle {
-    font-size: 0.875rem; /* Smaller for subtitle */
-    /* color: rgba(0,0,0,0.54); /* Let Material theme handle */
-    margin: 0;
-}
+
 
 #chat-messages-material {
   flex-grow: 1; /* Allow message area to take available space */

@@ -1,11 +1,17 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule, NgFor } from '@angular/common';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatChipsModule } from '@angular/material/chips';
 import { ChatMessageComponent } from './chat-message/chat-message.component';
 import { ChatInputComponent } from './chat-input/chat-input.component';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { ChatService, ToolRequestMessage } from '../../services/chat.service'; // Import ChatService
-import { Message } from '../../services/chat.service'; // Import Message from ChatService or a shared types file
-import { Subscription } from 'rxjs';
+import {
+  AiMessage,
+  ChatService,
+  Message,
+  ToolRequestMessage,
+} from '../../services/chat.service';
+import { Subscription, combineLatest } from 'rxjs';
 import { SettingsService } from '../../services/settings.service';
 
 @Component({
@@ -17,6 +23,8 @@ import { SettingsService } from '../../services/settings.service';
     ChatMessageComponent,
     ChatInputComponent,
     MatToolbarModule,
+    MatProgressBarModule,
+    MatChipsModule,
   ],
   templateUrl: './chat-area.component.html',
   styleUrl: './chat-area.component.css',
@@ -26,13 +34,49 @@ export class ChatAreaComponent implements OnInit, OnDestroy {
   private settingsService = inject(SettingsService);
 
   messages: Message[] = [];
-  private messagesSubscription: Subscription | undefined;
+  totalTokensUsed = 0;
+  inputTokenLimit = 0;
+  totalCost = 0;
+
+  private subscriptions = new Subscription();
 
   ngOnInit(): void {
-    this.messagesSubscription = this.chatService.messages$.subscribe(
-      (newMessages) => {
+    this.subscriptions.add(
+      combineLatest([
+        this.chatService.messages$,
+        this.settingsService.activeProfile$,
+      ]).subscribe(([newMessages, activeProfile]) => {
         this.messages = newMessages;
-      },
+        this.inputTokenLimit =
+          activeProfile?.modelInstance?.inputTokenLimit || 0;
+
+        this.totalTokensUsed = newMessages.reduce((sum, message) => {
+          if (
+            (message.sender === 'ai' && message.type === 'message') ||
+            message.type === 'tool_request'
+          ) {
+            const aiMessage = message as AiMessage | ToolRequestMessage;
+            return sum + (aiMessage.usageMetadata?.totalTokenCount || 0);
+          }
+          return sum;
+        }, 0);
+
+        this.totalCost = newMessages.reduce((sum, message) => {
+          if (
+            (message.sender === 'ai' && message.type === 'message') ||
+            message.type === 'tool_request'
+          ) {
+            const aiMessage = message as AiMessage | ToolRequestMessage;
+            return (
+              sum +
+              (aiMessage.modelInstance?.calculatePrice(
+                aiMessage.usageMetadata!,
+              ) || 0)
+            );
+          }
+          return sum;
+        }, 0);
+      }),
     );
   }
 
@@ -56,8 +100,6 @@ export class ChatAreaComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.messagesSubscription) {
-      this.messagesSubscription.unsubscribe();
-    }
+    this.subscriptions.unsubscribe();
   }
 }

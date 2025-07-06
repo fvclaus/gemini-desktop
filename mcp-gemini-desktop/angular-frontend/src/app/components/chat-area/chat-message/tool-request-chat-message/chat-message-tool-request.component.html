@@ -19,4 +19,7 @@
         </div>
     </details>
 </mat-card-content>
+<mat-chip-listbox *ngIf="message.usageMetadata">
+    <mat-chip>{{ getCost() | currency:'USD':'symbol':'1.2-2' }}</mat-chip>
+</mat-chip-listbox>
 

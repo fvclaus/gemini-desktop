@@ -1,24 +1,131 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { Profile } from './profile.interface';
+import { GoogleGenAI } from '@google/genai';
 
 const PROFILES_STORAGE_KEY = 'gemini-desktop-profiles';
 const SKIP_DELETE_CONFIRMATION_KEY = 'skip_delete_confirmation';
 
-export interface GeminiModel {
-  name: string;
-  label: string;
+export interface GeminiUsageMetadata {
+  /** Output only. Number of tokens in the cached part in the input (the cached content). */
+  cachedContentTokenCount?: number;
+  /** Number of tokens in the response(s). */
+  candidatesTokenCount?: number;
+  /** Number of tokens in the request. When `cached_content` is set, this is still the total effective prompt size meaning this includes the number of tokens in the cached content. */
+  promptTokenCount?: number;
+  /** Output only. Number of tokens present in thoughts output. */
+  thoughtsTokenCount?: number;
+  /** Output only. Number of tokens present in tool-use prompt(s). */
+  toolUsePromptTokenCount?: number;
+  /** Total token count for prompt, response candidates, and tool-use prompts (if present). */
+  totalTokenCount?: number;
 }
 
-export const GEMINI_PRO_2_5_PREVIEW_05_06: GeminiModel = {
-  label: 'Gemini 2.5 Pro Preview 05-06',
-  name: 'gemini-2.5-pro-preview-05-06',
-};
+export interface ModelPricing {
+  inputPrice: number;
+  outputPrice: number;
+  contextCachingPrice: number;
+}
 
-export const GEMINI_2_5_FLASH: GeminiModel = {
-  label: 'Gemini 2.5 Flash',
-  name: 'gemini-2.5-flash',
-};
+export abstract class AbstractGeminiModel {
+  abstract name: string;
+  abstract label: string;
+  inputTokenLimit?: number;
+
+  abstract calculatePrice(usage: GeminiUsageMetadata): number;
+}
+
+export class Gemini25Pro extends AbstractGeminiModel {
+  name = 'gemini-2.5-pro-preview-05-06';
+  label = 'Gemini 2.5 Pro Preview 05-06';
+
+  private getPricing(promptTokenCount: number): ModelPricing {
+    const isOver200k = promptTokenCount > 200000;
+    return {
+      inputPrice: isOver200k ? 2.5 : 1.25,
+      outputPrice: isOver200k ? 15.0 : 10.0,
+      contextCachingPrice: isOver200k ? 0.625 : 0.31,
+    };
+  }
+
+  calculatePrice(usage: GeminiUsageMetadata): number {
+    if (!usage.totalTokenCount) {
+      return 0;
+    }
+
+    const pricing = this.getPricing(usage.promptTokenCount || 0);
+    let cost = 0;
+
+    if (usage.promptTokenCount) {
+      cost += (usage.promptTokenCount / 1_000_000) * pricing.inputPrice;
+    }
+    if (usage.candidatesTokenCount) {
+      cost += (usage.candidatesTokenCount / 1_000_000) * pricing.outputPrice;
+    }
+    if (usage.cachedContentTokenCount) {
+      cost +=
+        (usage.cachedContentTokenCount / 1_000_000) *
+        pricing.contextCachingPrice;
+    }
+    if (usage.toolUsePromptTokenCount) {
+      // Tool use prompt tokens are part of the input tokens
+      cost += (usage.toolUsePromptTokenCount / 1_000_000) * pricing.inputPrice;
+    }
+    if (usage.thoughtsTokenCount) {
+      // Thoughts tokens are part of the output tokens
+      cost += (usage.thoughtsTokenCount / 1_000_000) * pricing.outputPrice;
+    }
+
+    return cost;
+  }
+}
+
+export class Gemini25Flash extends AbstractGeminiModel {
+  name = 'gemini-2.5-flash';
+  label = 'Gemini 2.5 Flash';
+
+  private getPricing(): ModelPricing {
+    return {
+      inputPrice: 0.3,
+      outputPrice: 2.5,
+      contextCachingPrice: 0.075,
+    };
+  }
+
+  calculatePrice(usage: GeminiUsageMetadata): number {
+    if (!usage.totalTokenCount) {
+      return 0;
+    }
+
+    const pricing = this.getPricing();
+    let cost = 0;
+
+    if (usage.promptTokenCount) {
+      cost += (usage.promptTokenCount / 1_000_000) * pricing.inputPrice;
+    }
+    if (usage.candidatesTokenCount) {
+      cost += (usage.candidatesTokenCount / 1_000_000) * pricing.outputPrice;
+    }
+    if (usage.cachedContentTokenCount) {
+      cost +=
+        (usage.cachedContentTokenCount / 1_000_000) *
+        pricing.contextCachingPrice;
+    }
+    if (usage.toolUsePromptTokenCount) {
+      cost += (usage.toolUsePromptTokenCount / 1_000_000) * pricing.inputPrice;
+    }
+    if (usage.thoughtsTokenCount) {
+      cost += (usage.thoughtsTokenCount / 1_000_000) * pricing.outputPrice;
+    }
+
+    return cost;
+  }
+}
+
+export const GEMINI_MODELS: AbstractGeminiModel[] = [
+  new Gemini25Pro(),
+  new Gemini25Flash(),
+];
 
 @Injectable({
   providedIn: 'root',
@@ -30,12 +137,21 @@ export class SettingsService {
   private activeProfileSubject = new BehaviorSubject<Profile | null>(null);
   activeProfile$ = this.activeProfileSubject.asObservable();
 
+  private modelsMap = new Map<string, AbstractGeminiModel>();
+
   constructor() {
+    GEMINI_MODELS.forEach((model) => this.modelsMap.set(model.name, model));
     this.loadProfiles();
   }
 
   private loadProfiles(): void {
-    const profiles = this.getProfilesFromStorage();
+    const profiles = this.getProfilesFromStorage().map((p) => {
+      const modelInstance = this.modelsMap.get(p.model);
+      if (modelInstance) {
+        return { ...p, modelInstance };
+      }
+      return p;
+    });
 
     const activeProfiles = profiles.filter((p) => p.isActive);
     // More than one profile shouldn't be active, but if it is we just accept the first one
@@ -56,7 +172,16 @@ export class SettingsService {
   }
 
   private saveProfilesToStorage(profiles: Profile[]): void {
-    localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(profiles));
+    localStorage.setItem(
+      PROFILES_STORAGE_KEY,
+      JSON.stringify(
+        profiles.map((p) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { modelInstance, ...rest } = p;
+          return rest;
+        }),
+      ),
+    );
     this.profilesSubject.next(profiles);
     const activeProfile = profiles.find((p) => p.isActive);
     this.activeProfileSubject.next(activeProfile ? activeProfile : null);
@@ -65,6 +190,10 @@ export class SettingsService {
   addProfile(profile: Profile): void {
     const profiles = this.getProfilesFromStorage();
     profile.isActive = true;
+    const modelInstance = this.modelsMap.get(profile.model);
+    if (modelInstance) {
+      profile.modelInstance = modelInstance;
+    }
     this.saveProfilesToStorage([...profiles, profile]);
   }
 
@@ -72,6 +201,10 @@ export class SettingsService {
     const profiles = this.getProfilesFromStorage();
     const index = profiles.findIndex((p) => p.name === updatedProfile.name);
     if (index !== -1) {
+      const modelInstance = this.modelsMap.get(updatedProfile.model);
+      if (modelInstance) {
+        updatedProfile.modelInstance = modelInstance;
+      }
       profiles[index] = updatedProfile;
       this.saveProfilesToStorage(profiles);
     }
@@ -89,11 +222,14 @@ export class SettingsService {
     this.saveProfilesToStorage(filteredProfiles);
   }
 
-  setActiveProfile(activeProfile: Profile): void {
+  async setActiveProfile(activeProfile: Profile): Promise<void> {
     const profiles = this.profilesSubject.value;
     for (const profile of profiles) {
       if (profile.name === activeProfile.name) {
         profile.isActive = true;
+        if (!profile.modelInstance?.inputTokenLimit) {
+          await this.fetchModelInputTokenLimit(profile);
+        }
       } else {
         profile.isActive = false;
       }
@@ -116,5 +252,29 @@ export class SettingsService {
 
   setSkipDeleteConfirmation(skip: boolean): void {
     localStorage.setItem(SKIP_DELETE_CONFIRMATION_KEY, String(skip));
+  }
+
+  getGeminiModel(modelName: string): AbstractGeminiModel | undefined {
+    return this.modelsMap.get(modelName);
+  }
+
+  private async fetchModelInputTokenLimit(profile: Profile): Promise<void> {
+    try {
+      const genAI = new GoogleGenAI({ apiKey: profile.apiKey });
+      const modelInfo = await genAI.models.get({ model: profile.model });
+      const modelInstance = profile.modelInstance;
+      if (modelInstance) {
+        modelInstance.inputTokenLimit = modelInfo.inputTokenLimit;
+        this.modelsMap.set(modelInstance.name, modelInstance);
+        // Trigger update for active profile to reflect the new token limit
+        this.activeProfileSubject.next(profile);
+      }
+    } catch (error) {
+      console.error(
+        `Error fetching input token limit for model ${profile.model}:`,
+        error,
+      );
+      // Handle error, maybe set a default or show a message
+    }
   }
 }

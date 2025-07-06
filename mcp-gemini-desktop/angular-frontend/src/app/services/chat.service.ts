@@ -9,7 +9,11 @@ import {
   FunctionCall,
   GenerateContentResponse,
 } from '@google/genai';
-import { SettingsService } from './settings.service';
+import {
+  AbstractGeminiModel,
+  GeminiUsageMetadata,
+  SettingsService,
+} from './settings.service';
 import { McpServerStatus } from '../../../../src/shared/types';
 import { ChatSessionHistoryService } from './chat-session-history.service';
 import { ChatSession } from './chat-session.interface';
@@ -39,6 +43,9 @@ export interface AiMessage {
   text: string;
   htmlContent: string;
   timestamp: Date;
+  usageMetadata?: GeminiUsageMetadata;
+  model: AbstractGeminiModel;
+  modelInstance?: AbstractGeminiModel;
 }
 
 export interface SystemErrorMessage {
@@ -66,6 +73,9 @@ export interface ToolRequestMessage {
   tools: { name: string; args?: Record<string, unknown> }[];
   showRequestedTools?: boolean;
   timestamp: Date;
+  usageMetadata?: GeminiUsageMetadata;
+  model: AbstractGeminiModel;
+  modelInstance?: AbstractGeminiModel;
 }
 
 export interface ToolResultMessage {
@@ -280,7 +290,7 @@ export class ChatService {
             : undefined,
         },
       });
-      this.handleGeminiResponse(loadingMessageId, result);
+      this.handleGeminiResponse(loadingMessageId, result, profile);
     } catch (error) {
       console.error('Error sending message to Gemini:', error);
       const errorMessage =
@@ -306,6 +316,7 @@ export class ChatService {
   private handleGeminiResponse(
     loadingMessageId: string,
     response: GenerateContentResponse,
+    profile: Profile,
   ): void {
     this.ngZone.run(() => {
       const currentMessages = this.messagesSubject.getValue();
@@ -317,7 +328,7 @@ export class ChatService {
 
     const functionCalls = response.functionCalls;
     if (functionCalls && functionCalls.length > 0) {
-      const toolRequestMessage: Message = {
+      const toolRequestMessage: ToolRequestMessage = {
         id: this.generateId(),
         sender: 'ai',
         type: 'tool_request',
@@ -327,6 +338,8 @@ export class ChatService {
           args?: Record<string, unknown>;
         }[],
         timestamp: new Date(),
+        usageMetadata: response.usageMetadata,
+        model: profile.modelInstance!,
       };
       this.addMessageHelper(toolRequestMessage);
       this.chatHistory.push({
@@ -339,13 +352,15 @@ export class ChatService {
         console.error(`Excepted text but was undefined in response`, response);
         throw new Error(`Excepted text but was undefined in response`);
       }
-      const aiMessage: Message = {
+      const aiMessage: AiMessage = {
         id: this.generateId(),
         sender: 'ai',
         type: 'message',
         text: text,
         htmlContent: this.processAiMessageContent(text),
         timestamp: new Date(),
+        usageMetadata: response.usageMetadata,
+        model: profile.modelInstance!,
       };
       this.addMessageHelper(aiMessage);
       this.chatHistory.push({ role: 'model', parts: [{ text }] });
@@ -413,7 +428,7 @@ export class ChatService {
         model: profile.model,
         contents: this.chatHistory,
       });
-      this.handleGeminiResponse(loadingMessageId, result);
+      this.handleGeminiResponse(loadingMessageId, result, profile);
     } catch (error) {
       console.error('Error sending tool response to Gemini:', error);
       const errorMessage =

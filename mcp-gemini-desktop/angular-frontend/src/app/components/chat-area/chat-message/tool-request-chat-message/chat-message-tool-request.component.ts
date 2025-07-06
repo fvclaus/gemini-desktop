@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
+import { MatChipsModule } from '@angular/material/chips';
 import { ToolRequestMessage } from '../../../../services/chat.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatIcon } from '@angular/material/icon';
@@ -8,7 +9,13 @@ import { MatIcon } from '@angular/material/icon';
 @Component({
   selector: 'app-chat-message-tool-request',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatCardModule, MatIcon],
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatCardModule,
+    MatIcon,
+    MatChipsModule,
+  ],
   templateUrl: './chat-message-tool-request.component.html',
   styleUrl: './chat-message-tool-request.component.css',
 })
@@ -23,5 +30,12 @@ export class ToolRequestChatMessageComponent {
     // TODO persist this somehow
     this.message.showRequestedTools = false;
     this.toolResponse.emit({ message: this.message, approved });
+  }
+
+  getCost(): number {
+    return (
+      this.message.modelInstance?.calculatePrice(this.message.usageMetadata!) ||
+      0
+    );
   }
 }
