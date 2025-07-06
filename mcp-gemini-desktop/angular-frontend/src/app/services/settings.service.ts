@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Profile } from './profile.interface';
+import { PersistedProfile, Profile } from './profile.interface';
 import { GoogleGenAI } from '@google/genai';
 
 const PROFILES_STORAGE_KEY = 'gemini-desktop-profiles';
@@ -146,11 +146,9 @@ export class SettingsService {
 
   private loadProfiles(): void {
     const profiles = this.getProfilesFromStorage().map((p) => {
-      const modelInstance = this.modelsMap.get(p.model);
-      if (modelInstance) {
-        return { ...p, modelInstance };
-      }
-      return p;
+      // TODO Better serialization
+      const modelInstance = this.getGeminiModel((p as PersistedProfile).model);
+      return { ...p, model: modelInstance };
     });
 
     const activeProfiles = profiles.filter((p) => p.isActive);
@@ -166,7 +164,7 @@ export class SettingsService {
     }
   }
 
-  private getProfilesFromStorage(): Profile[] {
+  private getProfilesFromStorage(): PersistedProfile[] {
     const profilesJson = localStorage.getItem(PROFILES_STORAGE_KEY);
     return profilesJson ? JSON.parse(profilesJson) : [];
   }
@@ -176,9 +174,7 @@ export class SettingsService {
       PROFILES_STORAGE_KEY,
       JSON.stringify(
         profiles.map((p) => {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { modelInstance, ...rest } = p;
-          return rest;
+          return { ...p, model: p.model.name };
         }),
       ),
     );
@@ -187,25 +183,32 @@ export class SettingsService {
     this.activeProfileSubject.next(activeProfile ? activeProfile : null);
   }
 
-  addProfile(profile: Profile): void {
-    const profiles = this.getProfilesFromStorage();
-    profile.isActive = true;
+  addProfile(profile: PersistedProfile): void {
+    const profiles = this.profilesSubject.value;
     const modelInstance = this.modelsMap.get(profile.model);
-    if (modelInstance) {
-      profile.modelInstance = modelInstance;
+    // TODO
+    if (!modelInstance) {
+      throw new Error(`Unknown model: ${profile.model}`);
     }
-    this.saveProfilesToStorage([...profiles, profile]);
+    this.saveProfilesToStorage([
+      ...profiles,
+      { ...profile, model: modelInstance, isActive: true },
+    ]);
   }
 
-  updateProfile(updatedProfile: Profile): void {
-    const profiles = this.getProfilesFromStorage();
+  updateProfile(updatedProfile: PersistedProfile): void {
+    const profiles = this.profilesSubject.value;
     const index = profiles.findIndex((p) => p.name === updatedProfile.name);
     if (index !== -1) {
       const modelInstance = this.modelsMap.get(updatedProfile.model);
-      if (modelInstance) {
-        updatedProfile.modelInstance = modelInstance;
+      // TODO
+      if (!modelInstance) {
+        throw new Error(`Unknown model: ${updatedProfile.model}`);
       }
-      profiles[index] = updatedProfile;
+      profiles[index] = {
+        ...updatedProfile,
+        model: modelInstance,
+      };
       this.saveProfilesToStorage(profiles);
     }
   }
@@ -227,7 +230,7 @@ export class SettingsService {
     for (const profile of profiles) {
       if (profile.name === activeProfile.name) {
         profile.isActive = true;
-        if (!profile.modelInstance?.inputTokenLimit) {
+        if (!profile.model.inputTokenLimit) {
           await this.fetchModelInputTokenLimit(profile);
         }
       } else {
@@ -254,15 +257,21 @@ export class SettingsService {
     localStorage.setItem(SKIP_DELETE_CONFIRMATION_KEY, String(skip));
   }
 
-  getGeminiModel(modelName: string): AbstractGeminiModel | undefined {
-    return this.modelsMap.get(modelName);
+  getGeminiModel(modelName: string): AbstractGeminiModel {
+    const model = this.modelsMap.get(modelName);
+    if (!model) {
+      throw new Error('Should not happen');
+    }
+    return model;
   }
 
   private async fetchModelInputTokenLimit(profile: Profile): Promise<void> {
     try {
       const genAI = new GoogleGenAI({ apiKey: profile.apiKey });
-      const modelInfo = await genAI.models.get({ model: profile.model });
-      const modelInstance = profile.modelInstance;
+      const modelInfo = await genAI.models.get({
+        model: profile.model.name,
+      });
+      const modelInstance = profile.model;
       if (modelInstance) {
         modelInstance.inputTokenLimit = modelInfo.inputTokenLimit;
         this.modelsMap.set(modelInstance.name, modelInstance);
@@ -271,7 +280,7 @@ export class SettingsService {
       }
     } catch (error) {
       console.error(
-        `Error fetching input token limit for model ${profile.model}:`,
+        `Error fetching input token limit for model ${profile.model.name}:`,
         error,
       );
       // Handle error, maybe set a default or show a message

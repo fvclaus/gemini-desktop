@@ -24,8 +24,10 @@ export class ChatSessionHistoryService {
           (message.type === 'message' || message.type === 'tool_request')
         ) {
           const aiMessage = message as AiMessage | ToolRequestMessage;
-          aiMessage.modelInstance = this.settingsService.getGeminiModel(
-            aiMessage.model.name,
+          aiMessage.model = this.settingsService.getGeminiModel(
+            // TODO Better typing
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            aiMessage.model as any,
           );
         }
       });
@@ -40,11 +42,10 @@ export class ChatSessionHistoryService {
           message.sender === 'ai' &&
           (message.type === 'message' || message.type === 'tool_request')
         ) {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { modelInstance, ...rest } = message as
-            | AiMessage
-            | ToolRequestMessage;
-          return rest;
+          return {
+            ...message,
+            model: message.model.name,
+          };
         }
         return message;
       });

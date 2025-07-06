@@ -14,4 +14,13 @@ html {
 :root {
   @include mat.sidenav-overrides((
   ));
+
+  @include mat.form-field-overrides((
+    // outlined-outline-width: 0
+  ));
+}
+
+// Conflict with Tailwind
+.mdc-notched-outline__notch {
+  border-right: 0px
 }

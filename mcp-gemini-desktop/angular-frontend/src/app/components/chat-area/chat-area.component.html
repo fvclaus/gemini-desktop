@@ -1,13 +1,14 @@
 <div class="chat-area-material-wrapper"> <!-- Wrapper for overall chat area -->
   <div class="chat-header-content">
-    <span class="m-auto">
+    <span class="tw:m-auto tw:pr-2">
       {{ totalTokensUsed | number:'1.0-0' }}k
     </span>
-    <mat-progress-bar mode="determinate" [value]="(totalTokensUsed / inputTokenLimit) * 100"></mat-progress-bar>
-    <span>{{ inputTokenLimit | number:'1.0-0' }}k</span>
-    <mat-chip-listbox>
-      <mat-chip>{{ totalCost | currency:'USD':'symbol':'1.2-2' }}</mat-chip>
-    </mat-chip-listbox>
+    <mat-progress-bar mode="determinate" [value]="(totalTokensUsed / inputTokenLimit) * 100" class="tw:m-auto"></mat-progress-bar>
+    <span class="tw:m-auto tw:pr-2 tw:pl-2">{{ inputTokenLimit | number:'1.0-0' }}k</span>
+    <app-usage-metadata-display
+      [usageMetadata]="aggregatedUsageMetadata"
+      [cost]="totalCost"
+    ></app-usage-metadata-display>
   </div>
 
   <div id="chat-messages-material" class="chat-messages-container">

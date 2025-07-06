@@ -1,8 +1,14 @@
 <mat-card-content>
   <details class="message-details-material" [open]="!!message.showRequestedTools">
-    <summary class="message-summary-material">
-      <mat-icon>build</mat-icon>
-      Tool Call Request
+    <summary class="message-summary">
+      <mat-icon class="tw:m-auto">build</mat-icon>
+      <span class="tw:m-auto">Tool Call Request</span>
+      @if (message.usageMetadata) {
+        <app-usage-metadata-display
+          [usageMetadata]="message.usageMetadata"
+          [cost]="message.model.calculatePrice(message.usageMetadata!)"
+        ></app-usage-metadata-display>
+      }
     </summary>
     <div class="message-details-content-material">
       <div class="tool-request-container" [style.overflow-wrap]="'break-word'">
@@ -21,9 +27,5 @@
     </div>
   </details>
 </mat-card-content>
-@if (message.usageMetadata) {
-  <mat-chip-listbox>
-    <mat-chip>{{ getCost() | currency:'USD':'symbol':'1.2-2' }}</mat-chip>
-  </mat-chip-listbox>
-}
+
 

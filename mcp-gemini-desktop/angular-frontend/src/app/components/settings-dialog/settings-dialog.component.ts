@@ -10,7 +10,7 @@ import {
   FormlyModule,
   FormlyFormOptions,
 } from '@ngx-formly/core';
-import { Profile } from '../../services/profile.interface';
+import { PersistedProfile, Profile } from '../../services/profile.interface';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -33,8 +33,8 @@ import {
     MatInputModule,
     MatFormFieldModule,
     MatSelectModule,
-    MatDialogModule
-],
+    MatDialogModule,
+  ],
 })
 export class SettingsDialogComponent implements OnInit {
   private settingsService = inject(SettingsService);
@@ -42,7 +42,7 @@ export class SettingsDialogComponent implements OnInit {
   public data: Profile | null = inject(MAT_DIALOG_DATA);
 
   form = new FormGroup({});
-  formModel: Partial<Profile> = {};
+  formModel: Partial<PersistedProfile> = {};
   options: FormlyFormOptions = {};
   fields: FormlyFieldConfig[] = [
     {
@@ -92,7 +92,13 @@ export class SettingsDialogComponent implements OnInit {
   ngOnInit(): void {
     if (this.data) {
       this.isNewProfile = false;
-      this.formModel = { ...this.data };
+      this.formModel =
+        this.data !== null
+          ? {
+              ...this.data,
+              model: this.data.model.name,
+            }
+          : {};
     } else {
       this.isNewProfile = true;
       // Reset form for new profile
@@ -108,7 +114,7 @@ export class SettingsDialogComponent implements OnInit {
 
   onSave(): void {
     if (this.form.valid) {
-      const profile: Profile = this.formModel as Profile;
+      const profile = this.formModel as PersistedProfile;
       if (this.isNewProfile) {
         this.settingsService.addProfile(profile);
       } else {

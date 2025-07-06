@@ -12,7 +12,12 @@ import {
   ToolRequestMessage,
 } from '../../services/chat.service';
 import { Subscription, combineLatest } from 'rxjs';
-import { SettingsService } from '../../services/settings.service';
+import {
+  AbstractGeminiModel,
+  GeminiUsageMetadata,
+  SettingsService,
+} from '../../services/settings.service';
+import { UsageMetadataDisplayComponent } from '../usage-metadata-display/usage-metadata-display.component';
 
 @Component({
   selector: 'app-chat-area',
@@ -23,8 +28,9 @@ import { SettingsService } from '../../services/settings.service';
     ChatInputComponent,
     MatToolbarModule,
     MatProgressBarModule,
-    MatChipsModule
-],
+    MatChipsModule,
+    UsageMetadataDisplayComponent,
+  ],
   templateUrl: './chat-area.component.html',
   styleUrl: './chat-area.component.css',
 })
@@ -36,6 +42,8 @@ export class ChatAreaComponent implements OnInit, OnDestroy {
   totalTokensUsed = 0;
   inputTokenLimit = 0;
   totalCost = 0;
+  aggregatedUsageMetadata: GeminiUsageMetadata = {};
+  aggregatedModelInstance?: AbstractGeminiModel;
 
   private subscriptions = new Subscription();
 
@@ -46,8 +54,10 @@ export class ChatAreaComponent implements OnInit, OnDestroy {
         this.settingsService.activeProfile$,
       ]).subscribe(([newMessages, activeProfile]) => {
         this.messages = newMessages;
-        this.inputTokenLimit =
-          activeProfile?.modelInstance?.inputTokenLimit || 0;
+        this.inputTokenLimit = activeProfile?.model?.inputTokenLimit || 0;
+
+        this.aggregatedUsageMetadata = {};
+        this.aggregatedModelInstance = activeProfile?.model;
 
         this.totalTokensUsed = newMessages.reduce((sum, message) => {
           if (
@@ -55,28 +65,33 @@ export class ChatAreaComponent implements OnInit, OnDestroy {
             message.type === 'tool_request'
           ) {
             const aiMessage = message as AiMessage | ToolRequestMessage;
-            return sum + (aiMessage.usageMetadata?.totalTokenCount || 0);
-          }
-          return sum;
-        }, 0);
-
-        this.totalCost = newMessages.reduce((sum, message) => {
-          if (
-            (message.sender === 'ai' && message.type === 'message') ||
-            message.type === 'tool_request'
-          ) {
-            const aiMessage = message as AiMessage | ToolRequestMessage;
-            return (
-              sum +
-              (aiMessage.modelInstance?.calculatePrice(
-                aiMessage.usageMetadata!,
-              ) || 0)
+            this.aggregateUsageMetadata(aiMessage.usageMetadata);
+            this.totalCost += aiMessage.model.calculatePrice(
+              aiMessage.usageMetadata!,
             );
+            return sum + (aiMessage.usageMetadata?.totalTokenCount || 0);
           }
           return sum;
         }, 0);
       }),
     );
+  }
+
+  private aggregateUsageMetadata(metadata?: GeminiUsageMetadata): void {
+    if (!metadata) {
+      return;
+    }
+
+    for (const key in metadata) {
+      if (Object.prototype.hasOwnProperty.call(metadata, key)) {
+        const typedKey = key as keyof GeminiUsageMetadata;
+        if (typeof metadata[typedKey] === 'number') {
+          this.aggregatedUsageMetadata[typedKey] =
+            (this.aggregatedUsageMetadata[typedKey] || 0) +
+            (metadata[typedKey] || 0);
+        }
+      }
+    }
   }
 
   handleMessageSent(messageText: string): void {

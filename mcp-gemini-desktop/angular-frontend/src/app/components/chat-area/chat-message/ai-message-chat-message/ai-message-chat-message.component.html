@@ -1,8 +1,11 @@
-<mat-card-content class="message-content-material" [innerHTML]="getFormattedContent()">
+<mat-card-content class="message-content-material" >
   <!-- Content will be rendered here by [innerHTML] -->
+   <p [innerHTML]="getFormattedContent()"></p>
+   @if (message.usageMetadata) {
+     <app-usage-metadata-display
+       [usageMetadata]="message.usageMetadata"
+       [cost]="message.model.calculatePrice(message.usageMetadata!)"
+     ></app-usage-metadata-display>
+   }
+
 </mat-card-content>
-@if (message.usageMetadata) {
-  <mat-chip-listbox>
-    <mat-chip>{{ getCost() | currency:'USD':'symbol':'1.2-2' }}</mat-chip>
-  </mat-chip-listbox>
-}

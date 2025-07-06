@@ -1,11 +1,9 @@
 <mat-card-content>
     <details class="message-details-material" [open]="!!message.showToolResults">
-        <summary class="message-summary-material">
+        <summary class="message-summary">
             <mat-icon>build</mat-icon>
             Tool Call Result
         </summary>
-        <div class="message-details-content-material">
-            {{ message.result }}
-        </div>
+        <pre>{{ message.result | json}}</pre>
     </details>
 </mat-card-content>

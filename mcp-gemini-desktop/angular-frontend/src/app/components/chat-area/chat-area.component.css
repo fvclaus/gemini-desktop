@@ -19,7 +19,7 @@
   /* Material theme handles background, text color, and border */
 }
 .chat-header-content {
-  width: calc(100% - 2 * 10px);
+  width: 100%;
   padding:10px;
   border-bottom: 1px solid black;
   display: flex;

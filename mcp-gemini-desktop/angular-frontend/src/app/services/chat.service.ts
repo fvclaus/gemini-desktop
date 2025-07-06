@@ -45,7 +45,6 @@ export interface AiMessage {
   timestamp: Date;
   usageMetadata?: GeminiUsageMetadata;
   model: AbstractGeminiModel;
-  modelInstance?: AbstractGeminiModel;
 }
 
 export interface SystemErrorMessage {
@@ -75,7 +74,6 @@ export interface ToolRequestMessage {
   timestamp: Date;
   usageMetadata?: GeminiUsageMetadata;
   model: AbstractGeminiModel;
-  modelInstance?: AbstractGeminiModel;
 }
 
 export interface ToolResultMessage {
@@ -134,8 +132,8 @@ export class ChatService {
   private initializeGenAI(profile: Profile): GoogleGenAI {
     try {
       return new GoogleGenAI({ apiKey: profile.apiKey });
-      console.log('Gemini client initialized successfully.');
     } catch (error) {
+      // TODO Test
       console.error('Error initializing Gemini client:', error);
       this.addMessageHelper({
         id: 'init-error',
@@ -237,14 +235,6 @@ export class ChatService {
   async sendMessage(profile: Profile, messageText: string): Promise<void> {
     const genAI = this.initializeGenAI(profile);
 
-    // this.addMessageHelper({
-    //   id: 'init-error',
-    //   text: 'Error: Chat session not initialized. Please check your API key.',
-    //   sender: 'system',
-    //   type: 'error',
-    //   timestamp: new Date(),
-    // });
-
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       type: 'message',
@@ -265,7 +255,7 @@ export class ChatService {
 
     try {
       const result = await genAI.models.generateContent({
-        model: profile.model,
+        model: profile.model.name,
         contents: this.chatHistory,
 
         config: {
@@ -339,7 +329,7 @@ export class ChatService {
         }[],
         timestamp: new Date(),
         usageMetadata: response.usageMetadata,
-        model: profile.modelInstance!,
+        model: profile.model,
       };
       this.addMessageHelper(toolRequestMessage);
       this.chatHistory.push({
@@ -360,7 +350,7 @@ export class ChatService {
         htmlContent: this.processAiMessageContent(text),
         timestamp: new Date(),
         usageMetadata: response.usageMetadata,
-        model: profile.modelInstance!,
+        model: profile.model!,
       };
       this.addMessageHelper(aiMessage);
       this.chatHistory.push({ role: 'model', parts: [{ text }] });
@@ -384,26 +374,46 @@ export class ChatService {
 
     let toolResponsePart: Part;
     if (approved) {
-      // TODO Support more than one tool call
-      const toolResult = await window.electronAPI.callMcpTool(
-        toolCall[0].id!,
-        toolCall[0].name!,
-        toolCall[0].args,
-      );
-      toolResponsePart = {
-        functionResponse: {
-          name: toolCall[0].name,
-          response: toolResult,
-        },
-      };
-      this.addMessageHelper({
-        id: this.generateId(),
-        sender: 'system',
-        type: 'tool_result',
-        tool: { name: toolCall[0].name!, args: toolCall[0].args },
-        result: toolResult,
-        timestamp: new Date(),
-      });
+      try {
+        // TODO Support more than one tool call
+        const toolResult = await window.electronAPI.callMcpTool(
+          toolCall[0].id!,
+          toolCall[0].name!,
+          toolCall[0].args,
+        );
+        toolResponsePart = {
+          functionResponse: {
+            name: toolCall[0].name,
+            response: toolResult,
+          },
+        };
+        this.addMessageHelper({
+          id: this.generateId(),
+          sender: 'system',
+          type: 'tool_result',
+          tool: { name: toolCall[0].name!, args: toolCall[0].args },
+          result: toolResult,
+          timestamp: new Date(),
+        });
+      } catch (error: unknown) {
+        const result = {
+          error: `${error}`,
+        };
+        this.addMessageHelper({
+          id: this.generateId(),
+          sender: 'system',
+          type: 'tool_result',
+          tool: { name: toolCall[0].name!, args: toolCall[0].args },
+          result: result,
+          timestamp: new Date(),
+        });
+        toolResponsePart = {
+          functionResponse: {
+            name: toolCall[0].name,
+            response: result,
+          },
+        };
+      }
     } else {
       toolResponsePart = {
         functionResponse: {
@@ -425,7 +435,7 @@ export class ChatService {
 
     try {
       const result = await genAI.models.generateContent({
-        model: profile.model,
+        model: profile.model.name,
         contents: this.chatHistory,
       });
       this.handleGeminiResponse(loadingMessageId, result, profile);

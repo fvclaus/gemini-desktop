@@ -1,2 +1,2 @@
-@import "tailwindcss/theme";
-@import "tailwindcss/utilities";
+@import "tailwindcss" prefix(tw);
+@import "tailwindcss/utilities" prefix(tw);

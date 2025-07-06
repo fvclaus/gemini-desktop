@@ -1,0 +1,27 @@
+
+<mat-chip-listbox >
+  <mat-chip (mouseenter)="showOverlay($event)" (mouseleave)="closeOverlay()">{{ cost | currency:'USD':'symbol':'1.6-6' }}</mat-chip>
+</mat-chip-listbox>
+
+<ng-template #usageDetailsOverlay>
+  <mat-card class="tw:p-4 tw:text-xs tw:text-gray-500 tw:mt-1">
+    @if (usageMetadata.totalTokenCount) {
+      <div>Total Tokens: {{ usageMetadata.totalTokenCount }}</div>
+    }
+    @if (usageMetadata.promptTokenCount) {
+      <div>Prompt Tokens: {{ usageMetadata.promptTokenCount }}</div>
+    }
+    @if (usageMetadata.candidatesTokenCount) {
+      <div>Candidate Tokens: {{ usageMetadata.candidatesTokenCount }}</div>
+    }
+    @if (usageMetadata.cachedContentTokenCount) {
+      <div>Cached Content Tokens: {{ usageMetadata.cachedContentTokenCount }}</div>
+    }
+    @if (usageMetadata.toolUsePromptTokenCount) {
+      <div>Tool Use Prompt Tokens: {{ usageMetadata.toolUsePromptTokenCount }}</div>
+    }
+    @if (usageMetadata.thoughtsTokenCount) {
+      <div>Thoughts Tokens: {{ usageMetadata.thoughtsTokenCount }}</div>
+    }
+  </mat-card>
+</ng-template>

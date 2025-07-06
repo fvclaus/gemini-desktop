@@ -1,4 +1,10 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  ViewEncapsulation,
+} from '@angular/core';
 import { CommonModule, NgClass } from '@angular/common';
 import { Message, ToolRequestMessage } from '../../../services/chat.service';
 import { MatCardModule } from '@angular/material/card';
@@ -27,6 +33,7 @@ import { ToolRequestChatMessageComponent } from './tool-request-chat-message/cha
   ],
   templateUrl: './chat-message.component.html',
   styleUrl: './chat-message.component.css',
+  encapsulation: ViewEncapsulation.None,
 })
 export class ChatMessageComponent {
   @Input() message!: Message;
