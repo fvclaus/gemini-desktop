@@ -5,7 +5,7 @@ import {
   ChangeDetectorRef,
   inject,
 } from '@angular/core';
-import { CommonModule, NgFor, NgIf } from '@angular/common';
+
 import { ServerItemComponent } from './server-item/server-item.component';
 import { MatListModule } from '@angular/material/list';
 import { ChatService } from '../../../services/chat.service'; // Import ChatService
@@ -17,13 +17,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   selector: 'app-server-list',
   standalone: true,
   imports: [
-    CommonModule,
-    NgFor,
-    NgIf,
     ServerItemComponent,
     MatListModule,
-    MatProgressSpinnerModule, // Add MatProgressSpinnerModule
-  ],
+    MatProgressSpinnerModule
+],
   templateUrl: './server-list.component.html',
   styleUrl: './server-list.component.css',
 })

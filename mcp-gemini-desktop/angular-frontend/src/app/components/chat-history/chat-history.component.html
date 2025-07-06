@@ -2,21 +2,27 @@
   <h2>Chat History</h2>
   <div class="chat-history-list">
     <mat-list>
-      <mat-list-item *ngFor="let session of visibleSessions" (click)="loadSession(session.id)">
-        <div mat-line>{{ getTitle(session) }}</div>
-        <div mat-line>
-          <small>{{ session.startTime | date:'short' }}</small>
-        </div>
-        <button mat-icon-button (click)="deleteSession(session.id, $event)" class="delete-button">
-          <mat-icon>delete</mat-icon>
-        </button>
-      </mat-list-item>
+      @for (session of visibleSessions; track session) {
+        <mat-list-item (click)="loadSession(session.id)">
+          <div mat-line>{{ getTitle(session) }}</div>
+          <div mat-line>
+            <small>{{ session.startTime | date:'short' }}</small>
+          </div>
+          <button mat-icon-button (click)="deleteSession(session.id, $event)" class="delete-button">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </mat-list-item>
+      }
     </mat-list>
   </div>
   <div class="chat-history-actions">
-    <button mat-button *ngIf="sessions.length > 5" (click)="toggleShowAll()">
-      {{ showAll ? 'Show Less' : 'Show More' }}
-    </button>
+    @if (sessions.length > 5) {
+      <button mat-button (click)="toggleShowAll()">
+        {{ showAll ? 'Show Less' : 'Show More' }}
+      </button>
+    }
   </div>
-  <p *ngIf="sessions.length === 0">No chat history found.</p>
+  @if (sessions.length === 0) {
+    <p>No chat history found.</p>
+  }
 </div>

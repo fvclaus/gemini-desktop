@@ -1,18 +1,24 @@
-<div *ngIf="workspaceState$() as state" class="workspace-container">
-    <div *ngIf="!state.isLoading && !state.error" class="workspace-content">
+@if (workspaceState$(); as state) {
+  <div class="workspace-container">
+    @if (!state.isLoading && !state.error) {
+      <div class="workspace-content">
         <mat-icon>folder</mat-icon>
         <span class="workspace-name">{{ extractFolderName(state.path) }}</span>
         <button mat-icon-button (click)="promptForWorkspace()" [disabled]="state.isLoading">
-            <mat-icon>{{ state.path ? 'sync_alt' : 'add_circle_outline' }}</mat-icon>
+          <mat-icon>{{ state.path ? 'sync_alt' : 'add_circle_outline' }}</mat-icon>
         </button>
-    </div>
-
-    <div *ngIf="state.isLoading" class="loading-container">
+      </div>
+    }
+    @if (state.isLoading) {
+      <div class="loading-container">
         <mat-spinner diameter="24"></mat-spinner>
-    </div>
-
-    <div *ngIf="state.error" class="error-container">
+      </div>
+    }
+    @if (state.error) {
+      <div class="error-container">
         <mat-icon color="warn">error_outline</mat-icon>
         <p class="error-message">{{ state.error }}</p>
-    </div>
-</div>
+      </div>
+    }
+  </div>
+}

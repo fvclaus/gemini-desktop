@@ -1,30 +1,35 @@
 <div class="sidebar-content-wrapper">
-    <div class="tab-header">
-        <button mat-icon-button (click)="newChat()" [class.active]="activeTab === 'new'">
-            <mat-icon>add</mat-icon>
-        </button>
-        <button mat-icon-button (click)="setTab('servers')" [class.active]="activeTab === 'servers'">
-            <mat-icon>dvr</mat-icon>
-        </button>
-    </div>
+  <div class="tab-header">
+    <button mat-icon-button (click)="newChat()" [class.active]="activeTab === 'new'">
+      <mat-icon>add</mat-icon>
+    </button>
+    <button mat-icon-button (click)="setTab('servers')" [class.active]="activeTab === 'servers'">
+      <mat-icon>dvr</mat-icon>
+    </button>
+  </div>
 
-    <div [ngSwitch]="activeTab">
-        <div *ngSwitchCase="'new'">
-            <app-chat-history></app-chat-history>
+  <div>
+    @switch (activeTab) {
+      @case ('new') {
+        <div>
+          <app-chat-history></app-chat-history>
         </div>
-
-        <div *ngSwitchCase="'servers'">
-            <div class="sidebar-footer-material done-button-container">
-                <button mat-stroked-button (click)="setTab('new')">
-                    Done
-                </button>
-            </div>
-            <mat-toolbar class="sidebar-toolbar">
-                <span>MCP Servers</span>
-            </mat-toolbar>
-            <div class="sidebar-section">
-                <app-server-list></app-server-list>
-            </div>
+      }
+      @case ('servers') {
+        <div>
+          <div class="sidebar-footer-material done-button-container">
+            <button mat-stroked-button (click)="setTab('new')">
+              Done
+            </button>
+          </div>
+          <mat-toolbar class="sidebar-toolbar">
+            <span>MCP Servers</span>
+          </mat-toolbar>
+          <div class="sidebar-section">
+            <app-server-list></app-server-list>
+          </div>
         </div>
-    </div>
+      }
+    }
+  </div>
 </div>

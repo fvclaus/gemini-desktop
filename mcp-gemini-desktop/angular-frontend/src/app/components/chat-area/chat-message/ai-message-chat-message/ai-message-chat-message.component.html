@@ -1,6 +1,8 @@
 <mat-card-content class="message-content-material" [innerHTML]="getFormattedContent()">
-    <!-- Content will be rendered here by [innerHTML] -->
+  <!-- Content will be rendered here by [innerHTML] -->
 </mat-card-content>
-<mat-chip-listbox *ngIf="message.usageMetadata">
+@if (message.usageMetadata) {
+  <mat-chip-listbox>
     <mat-chip>{{ getCost() | currency:'USD':'symbol':'1.2-2' }}</mat-chip>
-</mat-chip-listbox>
+  </mat-chip-listbox>
+}

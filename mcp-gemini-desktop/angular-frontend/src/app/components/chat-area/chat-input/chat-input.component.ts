@@ -5,7 +5,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TextFieldModule } from '@angular/cdk/text-field';
-import { CommonModule } from '@angular/common';
+
 import { MatDividerModule } from '@angular/material/divider';
 import { ProfileSelectorComponent } from '../../profile-selector/profile-selector.component';
 
@@ -13,7 +13,6 @@ import { ProfileSelectorComponent } from '../../profile-selector/profile-selecto
   selector: 'app-chat-input',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     MatFormFieldModule,
     MatInputModule,
@@ -21,8 +20,8 @@ import { ProfileSelectorComponent } from '../../profile-selector/profile-selecto
     MatIconModule,
     TextFieldModule,
     MatDividerModule,
-    ProfileSelectorComponent,
-  ],
+    ProfileSelectorComponent
+],
   templateUrl: './chat-input.component.html',
   styleUrl: './chat-input.component.css',
 })

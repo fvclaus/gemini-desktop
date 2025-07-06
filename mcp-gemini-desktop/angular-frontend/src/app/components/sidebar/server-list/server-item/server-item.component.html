@@ -1,37 +1,39 @@
 <div class="server-item-card">
-    <div mat-list-item role="listitem" class="server-item-material">
-        <div class="server-item-content">
-            <mat-expansion-panel class="tools-expansion-panel" >
-                <mat-expansion-panel-header>
-                    <div matListItemTitle class="server-info-material">
-                    <span class="server-name-material" [title]="server.identifier">{{ server.identifier }}</span>
-                    <div class="status-circle" [ngClass]="server.state"></div>
-                    <button mat-icon-button color="warn" (click)="deleteServer()" class="delete-server-btn-material"
-                        title="Remove Server">
-                        <mat-icon>delete</mat-icon>
-                    </button>
-                    </div>
-                </mat-expansion-panel-header>
-                @switch (server.state) {
-                    @case ('ERROR') {
-                        <div class="server-error-message" style="padding: 16px;">
-                            <mat-icon color="warn" style="vertical-align: middle;">error</mat-icon>
-                            <span style="color: #d32f2f; margin-left: 8px;">{{ server.error }}</span>
-                        </div>
-                    }
-                    @case ('STARTED') {
-                        <div class="tools-list-content">
-                                <mat-panel-title>
-                                Tools ({{ server.tools.length }})
-                            </mat-panel-title>
-                            <mat-chip-set>
-                                <mat-chip *ngFor="let tool of server.tools" (click)="openToolDialog(tool)" class="tool-chip">{{ tool.name }}</mat-chip>
-                            </mat-chip-set>
-                        </div>
-                    }
+  <div mat-list-item role="listitem" class="server-item-material">
+    <div class="server-item-content">
+      <mat-expansion-panel class="tools-expansion-panel" >
+        <mat-expansion-panel-header>
+          <div matListItemTitle class="server-info-material">
+            <span class="server-name-material" [title]="server.identifier">{{ server.identifier }}</span>
+            <div class="status-circle" [ngClass]="server.state"></div>
+            <button mat-icon-button color="warn" (click)="deleteServer()" class="delete-server-btn-material"
+              title="Remove Server">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </mat-expansion-panel-header>
+        @switch (server.state) {
+          @case ('ERROR') {
+            <div class="server-error-message" style="padding: 16px;">
+              <mat-icon color="warn" style="vertical-align: middle;">error</mat-icon>
+              <span style="color: #d32f2f; margin-left: 8px;">{{ server.error }}</span>
+            </div>
+          }
+          @case ('STARTED') {
+            <div class="tools-list-content">
+              <mat-panel-title>
+                Tools ({{ server.tools.length }})
+              </mat-panel-title>
+              <mat-chip-set>
+                @for (tool of server.tools; track tool) {
+                  <mat-chip (click)="openToolDialog(tool)" class="tool-chip">{{ tool.name }}</mat-chip>
                 }
-            </mat-expansion-panel>
-        </div>
-        
+              </mat-chip-set>
+            </div>
+          }
+        }
+      </mat-expansion-panel>
     </div>
+
+  </div>
 </div>

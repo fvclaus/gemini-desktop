@@ -5,13 +5,15 @@
 <mat-sidenav-container class="container" autosize="true">
   <mat-sidenav mode="side" opened class="sidebar-container">
     <div
-  class="resize-handle"
-  (mousedown)="startResizing($event)"
->
-</div>
+      class="resize-handle"
+      (mousedown)="startResizing($event)"
+      >
+    </div>
     <app-sidebar></app-sidebar>
   </mat-sidenav>
-  <mat-sidenav-content class="chat-area-container" *ngIf="showChatArea">
-    <app-chat-area></app-chat-area>
-  </mat-sidenav-content>
+  @if (showChatArea) {
+    <mat-sidenav-content class="chat-area-container">
+      <app-chat-area></app-chat-area>
+    </mat-sidenav-content>
+  }
 </mat-sidenav-container>

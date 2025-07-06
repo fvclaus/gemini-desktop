@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { WorkspaceComponent } from './workspace/workspace.component';
 // WorkspaceStateService might still be used by WorkspaceComponent, but SidebarComponent itself doesn't directly use its state here.
 // import { WorkspaceStateService, WorkspaceState } from '../../services/workspace-state.service';
@@ -14,14 +14,13 @@ import { ChatHistoryComponent } from '../chat-history/chat-history.component';
   selector: 'app-sidebar',
   standalone: true,
   imports: [
-    CommonModule,
     WorkspaceComponent,
     ServerListComponent,
     MatToolbarModule,
     MatButtonModule,
     MatIconModule,
-    ChatHistoryComponent,
-  ],
+    ChatHistoryComponent
+],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.css',
 })

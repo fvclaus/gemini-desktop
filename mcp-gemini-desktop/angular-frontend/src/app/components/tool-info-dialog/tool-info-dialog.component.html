@@ -3,19 +3,25 @@
   <p><strong>Description:</strong></p>
   <p>{{ data.tool.description }}</p>
 
-  <div *ngIf="schemaError" class="error-message">
-    {{ schemaError }}
-  </div>
+  @if (schemaError) {
+    <div class="error-message">
+      {{ schemaError }}
+    </div>
+  }
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit(model)" *ngIf="!schemaError">
-    <formly-form [model]="model" [fields]="fields" [options]="options" [form]="form"></formly-form>
-    <button type="submit" mat-raised-button color="primary" [disabled]="!form.valid">Call Tool</button>
-  </form>
+  @if (!schemaError) {
+    <form [formGroup]="form" (ngSubmit)="onSubmit(model)">
+      <formly-form [model]="model" [fields]="fields" [options]="options" [form]="form"></formly-form>
+      <button type="submit" mat-raised-button color="primary" [disabled]="!form.valid">Call Tool</button>
+    </form>
+  }
 
-  <div *ngIf="toolResultFormatted">
-    <p><strong>Result:</strong></p>
-    <pre class="result-pre"><code>{{ toolResultFormatted }}</code></pre>
-  </div>
+  @if (toolResultFormatted) {
+    <div>
+      <p><strong>Result:</strong></p>
+      <pre class="result-pre"><code>{{ toolResultFormatted }}</code></pre>
+    </div>
+  }
 
 </mat-dialog-content>
 <mat-dialog-actions align="end">

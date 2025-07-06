@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
-import { CommonModule, NgFor } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { ChatMessageComponent } from './chat-message/chat-message.component';
@@ -19,13 +19,12 @@ import { SettingsService } from '../../services/settings.service';
   standalone: true,
   imports: [
     CommonModule,
-    NgFor,
     ChatMessageComponent,
     ChatInputComponent,
     MatToolbarModule,
     MatProgressBarModule,
-    MatChipsModule,
-  ],
+    MatChipsModule
+],
   templateUrl: './chat-area.component.html',
   styleUrl: './chat-area.component.css',
 })

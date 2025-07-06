@@ -4,7 +4,7 @@ import {
   SettingsService,
   GEMINI_MODELS,
 } from '../../services/settings.service';
-import { CommonModule } from '@angular/common';
+
 import {
   FormlyFieldConfig,
   FormlyModule,
@@ -27,15 +27,14 @@ import {
   styleUrls: ['./settings-dialog.component.css'],
   standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     FormlyModule,
     MatButtonModule,
     MatInputModule,
     MatFormFieldModule,
     MatSelectModule,
-    MatDialogModule,
-  ],
+    MatDialogModule
+],
 })
 export class SettingsDialogComponent implements OnInit {
   private settingsService = inject(SettingsService);

@@ -3,8 +3,8 @@
     Create New Profile
   }
   @else {
-    Update Profile
-  }
+  Update Profile
+}
 </h2>
 <mat-dialog-content class="mat-typography">
   <form [formGroup]="form" (ngSubmit)="onSave()">
@@ -14,5 +14,7 @@
 <mat-dialog-actions align="end">
   <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid" (click)="onSave()">Save Profile</button>
   <button mat-button type="button" (click)="onCancel()">Cancel</button>
-  <button mat-button color="warn" type="button" (click)="onDelete()" *ngIf="!isNewProfile">Delete Profile</button>
+  @if (!isNewProfile) {
+    <button mat-button color="warn" type="button" (click)="onDelete()">Delete Profile</button>
+  }
 </mat-dialog-actions>

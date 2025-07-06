@@ -5,14 +5,16 @@
     <mat-icon>arrow_drop_down</mat-icon>
   </button>
   <mat-menu #profileMenu="matMenu">
-    <ng-container *ngIf="(profiles$ | async) as profiles">
-      <button mat-menu-item *ngFor="let profile of profiles | sortProfiles" (click)="selectProfile(profile)">
-        <span>{{ profile.name }}</span>
-        <button mat-icon-button (click)="editProfile(profile, $event)">
-          <mat-icon>settings</mat-icon>
+    @if ((profiles$ | async); as profiles) {
+      @for (profile of profiles | sortProfiles; track profile) {
+        <button mat-menu-item (click)="selectProfile(profile)">
+          <span>{{ profile.name }}</span>
+          <button mat-icon-button (click)="editProfile(profile, $event)">
+            <mat-icon>settings</mat-icon>
+          </button>
         </button>
-      </button>
-    </ng-container>
+      }
+    }
     <mat-divider></mat-divider>
     <button mat-menu-item (click)="addProfile()">
       <mat-icon>add</mat-icon>

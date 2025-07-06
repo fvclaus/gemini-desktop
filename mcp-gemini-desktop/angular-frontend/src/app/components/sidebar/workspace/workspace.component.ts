@@ -5,7 +5,7 @@ import {
   Signal,
   inject,
 } from '@angular/core'; // Removed Output, EventEmitter
-import { CommonModule } from '@angular/common';
+
 import {
   WorkspaceStateService,
   WorkspaceState,
@@ -23,12 +23,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   selector: 'app-workspace',
   standalone: true,
   imports: [
-    CommonModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule,
-  ],
+    MatProgressSpinnerModule
+],
   templateUrl: './workspace.component.html',
   styleUrl: './workspace.component.css',
 })

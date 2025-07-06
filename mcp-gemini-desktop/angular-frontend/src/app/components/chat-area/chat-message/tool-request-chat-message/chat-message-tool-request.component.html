@@ -1,25 +1,29 @@
 <mat-card-content>
-    <details class="message-details-material" [open]="!!message.showRequestedTools">
-        <summary class="message-summary-material">
-            <mat-icon>build</mat-icon>
-            Tool Call Request
-        </summary>
-        <div class="message-details-content-material">
-            <div class="tool-request-container" [style.overflow-wrap]="'break-word'">
-                <div *ngFor="let toolCall of message.tools" class="tool-call-details">
-                    <strong>Tool:</strong> {{ toolCall.name }}<br>
-                    <strong>Arguments:</strong>
-                    <pre>{{ toolCall.args | json }}</pre>
-                </div>
-                <div class="tool-request-actions">
-                    <button mat-button color="primary" (click)="onToolResponse(true)">Allow</button>
-                    <button mat-button color="warn" (click)="onToolResponse(false)">Deny</button>
-                </div>
-            </div>
+  <details class="message-details-material" [open]="!!message.showRequestedTools">
+    <summary class="message-summary-material">
+      <mat-icon>build</mat-icon>
+      Tool Call Request
+    </summary>
+    <div class="message-details-content-material">
+      <div class="tool-request-container" [style.overflow-wrap]="'break-word'">
+        @for (toolCall of message.tools; track toolCall) {
+          <div class="tool-call-details">
+            <strong>Tool:</strong> {{ toolCall.name }}<br>
+            <strong>Arguments:</strong>
+            <pre>{{ toolCall.args | json }}</pre>
+          </div>
+        }
+        <div class="tool-request-actions">
+          <button mat-button color="primary" (click)="onToolResponse(true)">Allow</button>
+          <button mat-button color="warn" (click)="onToolResponse(false)">Deny</button>
         </div>
-    </details>
+      </div>
+    </div>
+  </details>
 </mat-card-content>
-<mat-chip-listbox *ngIf="message.usageMetadata">
+@if (message.usageMetadata) {
+  <mat-chip-listbox>
     <mat-chip>{{ getCost() | currency:'USD':'symbol':'1.2-2' }}</mat-chip>
-</mat-chip-listbox>
+  </mat-chip-listbox>
+}
 

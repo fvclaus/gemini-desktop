@@ -1,5 +1,5 @@
 import { Component, NgZone, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule } from '@angular/material/dialog';
@@ -21,15 +21,14 @@ import { JSONSchema7 } from 'json-schema';
   selector: 'app-tool-info-dialog',
   standalone: true,
   imports: [
-    CommonModule,
     MatButtonModule,
     MatDialogModule,
     MatCardModule,
     MatIconModule,
     ReactiveFormsModule,
     FormlyModule,
-    FormlyMaterialModule,
-  ],
+    FormlyMaterialModule
+],
   templateUrl: './tool-info-dialog.component.html',
   styleUrls: ['./tool-info-dialog.component.css'],
 })

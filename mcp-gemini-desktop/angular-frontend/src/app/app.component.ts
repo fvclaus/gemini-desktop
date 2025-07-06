@@ -1,5 +1,5 @@
 import { Component, HostListener, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { ChatAreaComponent } from './components/chat-area/chat-area.component';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -15,15 +15,14 @@ import { SettingsDialogComponent } from './components/settings-dialog/settings-d
   selector: 'app-root',
   standalone: true,
   imports: [
-    CommonModule,
     SidebarComponent,
     ChatAreaComponent,
     MatSidenavModule,
     WorkspaceComponent,
     MatProgressSpinnerModule,
     MatButtonModule,
-    SettingsDialogComponent,
-  ],
+    SettingsDialogComponent
+],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
