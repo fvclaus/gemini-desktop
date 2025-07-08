@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatSessionHistoryService } from '../../services/chat-session-history.service';
 import { ChatService } from '../../services/chat.service';
@@ -10,6 +10,7 @@ import { ChatHistoryDeletionConfirmationDialogComponent } from '../chat-history-
 import { SettingsService } from '../../services/settings.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { Observable, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-chat-history',
@@ -24,19 +25,27 @@ import { MatIconModule } from '@angular/material/icon';
   templateUrl: './chat-history.component.html',
   styleUrls: ['./chat-history.component.css'],
 })
-export class ChatHistoryComponent implements OnInit {
+export class ChatHistoryComponent implements OnInit, OnDestroy {
   private chatHistoryService = inject(ChatSessionHistoryService);
   private chatService = inject(ChatService);
   private dialog = inject(MatDialog);
   private settingsService = inject(SettingsService);
 
-  public sessions: ChatSession[] = [];
+  public sessions$: Observable<ChatSession[]> =
+    this.chatHistoryService.sessions$;
   public visibleSessions: ChatSession[] = [];
   public showAll = false;
+  public showAllButton = false;
+  private sessionsSubscription: Subscription | undefined;
 
   ngOnInit(): void {
-    this.sessions = this.chatHistoryService.getAllSessions();
-    this.updateVisibleSessions();
+    this.sessionsSubscription = this.sessions$.subscribe((sessions) => {
+      this.updateVisibleSessions(sessions);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.sessionsSubscription?.unsubscribe();
   }
 
   loadSession(sessionId: string): void {
@@ -50,14 +59,17 @@ export class ChatHistoryComponent implements OnInit {
 
   toggleShowAll(): void {
     this.showAll = !this.showAll;
-    this.updateVisibleSessions();
+    this.showAllButton = false;
   }
 
-  private updateVisibleSessions(): void {
+  private updateVisibleSessions(sessions: ChatSession[]): void {
     if (this.showAll) {
-      this.visibleSessions = this.sessions;
+      this.visibleSessions = sessions;
+    } else if (this.visibleSessions.length > 5) {
+      this.visibleSessions = sessions.slice(0, 5);
+      this.showAllButton = true;
     } else {
-      this.visibleSessions = this.sessions.slice(0, 5);
+      this.visibleSessions = sessions;
     }
   }
 
@@ -91,8 +103,6 @@ export class ChatHistoryComponent implements OnInit {
 
   private performDelete(sessionId: string): void {
     this.chatHistoryService.deleteSession(sessionId);
-    this.sessions = this.chatHistoryService.getAllSessions();
-    this.updateVisibleSessions();
     if (this.chatService.getActiveSession()?.id === sessionId) {
       this.chatService.startNewSession();
     }

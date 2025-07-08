@@ -14,7 +14,8 @@
       <div class="tool-request-container" [style.overflow-wrap]="'break-word'">
         @for (toolCall of message.tools; track toolCall) {
           <div class="tool-call-details">
-            <strong>Tool:</strong> {{ toolCall.name }}<br>
+            <strong>Tool:</strong> {{ toolCall.toolName }}<br>
+            <!--TODO Add tool description -->
             <strong>Arguments:</strong>
             <pre>{{ toolCall.args | json }}</pre>
           </div>

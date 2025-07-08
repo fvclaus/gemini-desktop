@@ -65,11 +65,17 @@ export interface ToolDecisionMessage {
   timestamp: Date;
 }
 
+interface ToolCall {
+  serverName: string;
+  toolName: string;
+  args?: Record<string, unknown>;
+}
+
 export interface ToolRequestMessage {
   id: string;
   sender: 'ai';
   type: 'tool_request';
-  tools: { name: string; args?: Record<string, unknown> }[];
+  tools: ToolCall[];
   showRequestedTools?: boolean;
   timestamp: Date;
   usageMetadata?: GeminiUsageMetadata;
@@ -264,9 +270,8 @@ export class ChatService {
             .filter((mcpServer) => mcpServer.state === 'STARTED')
             .map((mcpServer) => {
               return {
-                // TODO Check with other mcp
                 functionDeclarations: mcpServer.tools.map((t) => ({
-                  name: t.name,
+                  name: `${mcpServer.identifier}_${t.name}`,
                   description: t.description,
                   parameters: t.inputSchema,
                 })),
@@ -323,10 +328,15 @@ export class ChatService {
         sender: 'ai',
         type: 'tool_request',
         showRequestedTools: true,
-        tools: functionCalls as {
-          name: string;
-          args?: Record<string, unknown>;
-        }[],
+        tools: functionCalls.map((f) => {
+          const [serverName, ...rest] = f.name!.split('_');
+          const toolName = rest.join('_');
+          return {
+            serverName,
+            toolName,
+            args: f.args,
+          };
+        }),
         timestamp: new Date(),
         usageMetadata: response.usageMetadata,
         model: profile.model,
@@ -360,7 +370,7 @@ export class ChatService {
   async sendToolResponse(
     profile: Profile,
     approved: boolean,
-    toolCall: FunctionCall[],
+    toolCalls: ToolCall[],
   ): Promise<void> {
     this.addMessageHelper({
       id: this.generateId(),
@@ -372,60 +382,70 @@ export class ChatService {
 
     const genAI = this.initializeGenAI(profile);
 
-    let toolResponsePart: Part;
+    let toolResponseParts: Part[] = [];
     if (approved) {
-      try {
-        // TODO Support more than one tool call
-        // TODO Support passing id if it was requested
-        const toolResult = await window.electronAPI.callMcpTool(
-          // TODO Must provide server name here
-          toolCall[0].name!,
-          toolCall[0].name!,
-          toolCall[0].args,
-        );
-        toolResponsePart = {
-          functionResponse: {
-            name: toolCall[0].name,
-            response: toolResult,
-          },
-        };
-        this.addMessageHelper({
-          id: this.generateId(),
-          sender: 'system',
-          type: 'tool_result',
-          tool: { name: toolCall[0].name!, args: toolCall[0].args },
-          result: toolResult,
-          timestamp: new Date(),
-        });
-      } catch (error: unknown) {
-        const result = {
-          error: `${error}`,
-        };
-        this.addMessageHelper({
-          id: this.generateId(),
-          sender: 'system',
-          type: 'tool_result',
-          tool: { name: toolCall[0].name!, args: toolCall[0].args },
-          result: result,
-          timestamp: new Date(),
-        });
-        toolResponsePart = {
-          functionResponse: {
-            name: toolCall[0].name,
-            response: result,
-          },
-        };
-      }
+      // Run all tool calls in parallel and collect results
+      toolResponseParts = await Promise.all(
+        toolCalls.map(async (toolCall) => {
+          try {
+            const toolResult = {
+              output: await window.electronAPI.callMcpTool(
+                toolCall.serverName,
+                toolCall.toolName,
+                toolCall.args,
+              ),
+            };
+            this.addMessageHelper({
+              id: this.generateId(),
+              sender: 'system',
+              type: 'tool_result',
+              tool: {
+                name: `${toolCall.serverName}_${toolCall.toolName}`,
+                args: toolCall.args,
+              },
+              result: toolResult,
+              timestamp: new Date(),
+            });
+            return {
+              functionResponse: {
+                name: toolCall.toolName,
+                response: toolResult,
+              },
+            } as Part;
+          } catch (error: unknown) {
+            const result = { error: `${error}` };
+            this.addMessageHelper({
+              id: this.generateId(),
+              sender: 'system',
+              type: 'tool_result',
+              tool: {
+                name: `${toolCall.serverName}_${toolCall.toolName}`,
+                args: toolCall.args,
+              },
+              result: result,
+              timestamp: new Date(),
+            });
+            return {
+              functionResponse: {
+                name: toolCall.toolName,
+                response: result,
+              },
+            } as Part;
+          }
+        }),
+      );
     } else {
-      toolResponsePart = {
+      toolResponseParts = toolCalls.map((t) => ({
         functionResponse: {
-          name: toolCall[0].name,
-          response: { result: 'User denied the tool call.' },
+          name: t.toolName,
+          response: {
+            error: 'User denied the function call.',
+          },
         },
-      };
+      }));
     }
 
-    this.chatHistory.push({ role: 'function', parts: [toolResponsePart] });
+    this.chatHistory.push({ role: 'function', parts: toolResponseParts });
 
     const loadingMessageId = `ai-loading-${Date.now()}`;
     this.addMessageHelper({

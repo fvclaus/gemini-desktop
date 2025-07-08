@@ -2,7 +2,7 @@
   <h2>Chat History</h2>
   <div class="chat-history-list">
     <mat-list>
-      @for (session of visibleSessions; track session) {
+      @for (session of visibleSessions; track session.id) {
         <mat-list-item (click)="loadSession(session.id)">
           <div mat-line>{{ getTitle(session) }}</div>
           <div mat-line>
@@ -16,13 +16,13 @@
     </mat-list>
   </div>
   <div class="chat-history-actions">
-    @if (sessions.length > 5) {
+    @if (showAllButton) {
       <button mat-button (click)="toggleShowAll()">
         {{ showAll ? 'Show Less' : 'Show More' }}
       </button>
     }
   </div>
-  @if (sessions.length === 0) {
+  @if ((sessions$ | async)?.length === 0) {
     <p>No chat history found.</p>
   }
 </div>
