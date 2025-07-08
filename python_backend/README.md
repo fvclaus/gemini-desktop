@@ -1,1 +1,0 @@
-pip install flask>=3.1.0 google-genai>=1.7.0 httpx>=0.28.1 mcp>=1.5.0 python-dotenv>=1.0.1

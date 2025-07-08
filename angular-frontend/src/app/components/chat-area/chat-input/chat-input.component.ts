@@ -20,8 +20,8 @@ import { ProfileSelectorComponent } from '../../profile-selector/profile-selecto
     MatIconModule,
     TextFieldModule,
     MatDividerModule,
-    ProfileSelectorComponent
-],
+    ProfileSelectorComponent,
+  ],
   templateUrl: './chat-input.component.html',
   styleUrl: './chat-input.component.css',
 })

@@ -16,11 +16,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 @Component({
   selector: 'app-server-list',
   standalone: true,
-  imports: [
-    ServerItemComponent,
-    MatListModule,
-    MatProgressSpinnerModule
-],
+  imports: [ServerItemComponent, MatListModule, MatProgressSpinnerModule],
   templateUrl: './server-list.component.html',
   styleUrl: './server-list.component.css',
 })

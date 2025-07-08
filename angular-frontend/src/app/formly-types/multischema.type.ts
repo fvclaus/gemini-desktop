@@ -14,30 +14,23 @@ import { MatCardModule } from '@angular/material/card';
           <mat-card-title>{{ props.label }}</mat-card-title>
         }
         @if (props.description) {
-          <mat-card-subtitle>{{
-            props.description
-          }}</mat-card-subtitle>
+          <mat-card-subtitle>{{ props.description }}</mat-card-subtitle>
         }
       </mat-card-header>
       <mat-card-content>
         @if (showError && formControl.errors) {
-          <div
-            class="alert alert-danger"
-            role="alert"
-            >
+          <div class="alert alert-danger" role="alert">
             <formly-validation-message
               [field]="field"
             ></formly-validation-message>
           </div>
         }
         @for (f of field.fieldGroup; track f) {
-          <formly-field
-            [field]="f"
-          ></formly-field>
+          <formly-field [field]="f"></formly-field>
         }
       </mat-card-content>
     </mat-card>
-    `,
+  `,
   standalone: true,
   imports: [FormlyField, FormlyValidationMessage, MatCardModule],
 })

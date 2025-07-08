@@ -8,10 +8,10 @@
             "name": "Debug Main Process",
             "type": "node",
             "request": "launch",
-            "cwd": "${workspaceRoot}/mcp-gemini-desktop",
-            "runtimeExecutable": "${workspaceRoot}/mcp-gemini-desktop/node_modules/.bin/electron-vite",
+            "cwd": "${workspaceRoot}",
+            "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron-vite",
             "windows": {
-                "runtimeExecutable": "${workspaceRoot}/mcp-gemini-desktop/node_modules/.bin/electron-vite.cmd"
+                "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron-vite.cmd"
             },
             "runtimeArgs": ["--sourcemap"],
             "env": {

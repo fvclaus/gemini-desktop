@@ -15,20 +15,17 @@ import { FormlyField, FormlyValidationMessage } from '@ngx-formly/core';
         <p>{{ props.description }}</p>
       }
       @if (showError && formControl.errors) {
-        <div
-          class="alert alert-danger"
-          role="alert"
-          >
-          <formly-validation-message [field]="field"></formly-validation-message>
+        <div class="alert alert-danger" role="alert">
+          <formly-validation-message
+            [field]="field"
+          ></formly-validation-message>
         </div>
       }
       @for (f of field.fieldGroup; track f) {
-        <formly-field
-          [field]="f"
-        ></formly-field>
+        <formly-field [field]="f"></formly-field>
       }
     </div>
-    `,
+  `,
   standalone: true,
   imports: [FormlyField, FormlyValidationMessage],
 })

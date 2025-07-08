@@ -19,8 +19,8 @@ import { ChatHistoryComponent } from '../chat-history/chat-history.component';
     MatToolbarModule,
     MatButtonModule,
     MatIconModule,
-    ChatHistoryComponent
-],
+    ChatHistoryComponent,
+  ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.css',
 })

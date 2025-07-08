@@ -27,8 +27,8 @@ import { JSONSchema7 } from 'json-schema';
     MatIconModule,
     ReactiveFormsModule,
     FormlyModule,
-    FormlyMaterialModule
-],
+    FormlyMaterialModule,
+  ],
   templateUrl: './tool-info-dialog.component.html',
   styleUrls: ['./tool-info-dialog.component.css'],
 })

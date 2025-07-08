@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule } from '@angular/forms';
@@ -14,11 +14,10 @@ import { MatDialogModule } from '@angular/material/dialog';
 })
 export class ChatHistoryDeletionConfirmationDialogComponent {
   rememberChoice = false;
-
-  constructor(
-    public dialogRef: MatDialogRef<ChatHistoryDeletionConfirmationDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { title: string; message: string },
-  ) {}
+  dialogRef = inject(
+    MatDialogRef<ChatHistoryDeletionConfirmationDialogComponent>,
+  );
+  data: { title: string; message: string } = inject(MAT_DIALOG_DATA);
 
   onCancel(): void {
     this.dialogRef.close({ confirmed: false });

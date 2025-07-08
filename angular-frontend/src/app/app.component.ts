@@ -21,8 +21,8 @@ import { SettingsDialogComponent } from './components/settings-dialog/settings-d
     WorkspaceComponent,
     MatProgressSpinnerModule,
     MatButtonModule,
-    SettingsDialogComponent
-],
+    SettingsDialogComponent,
+  ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
