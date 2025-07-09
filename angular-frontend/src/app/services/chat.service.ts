@@ -135,6 +135,29 @@ export class ChatService {
     });
   }
 
+  public async setToolVisibility(
+    serverName: string,
+    toolName: string,
+    hidden: boolean,
+  ): Promise<void> {
+    try {
+      await window.electronAPI.setToolVisibility(serverName, toolName, hidden);
+    } catch (error) {
+      console.error(
+        `Error setting tool visibility for ${serverName}/${toolName}:`,
+        error,
+      );
+      this.addMessageHelper({
+        id: this.generateId(),
+        text: `Error setting tool visibility: ${toolName}`,
+        sender: 'system',
+        type: 'error',
+        details: error instanceof Error ? error.message : String(error),
+        timestamp: new Date(),
+      });
+    }
+  }
+
   private initializeGenAI(profile: Profile): GoogleGenAI {
     try {
       return new GoogleGenAI({ apiKey: profile.apiKey });
@@ -270,11 +293,13 @@ export class ChatService {
             .filter((mcpServer) => mcpServer.state === 'STARTED')
             .map((mcpServer) => {
               return {
-                functionDeclarations: mcpServer.tools.map((t) => ({
-                  name: `${mcpServer.identifier}_${t.name}`,
-                  description: t.description,
-                  parameters: t.inputSchema,
-                })),
+                functionDeclarations: mcpServer.tools
+                  .filter((tool) => !tool.hidden) // Filter out hidden tools
+                  .map((t) => ({
+                    name: `${mcpServer.identifier}_${t.name}`,
+                    description: t.description,
+                    parameters: t.inputSchema,
+                  })),
               };
             }),
           systemInstruction: profile.systemPrompt
@@ -348,6 +373,13 @@ export class ChatService {
       });
     } else {
       const text = response.text;
+      // TODO
+      //       "candidates": [
+      //   {
+      //     "finishReason": "UNEXPECTED_TOOL_CALL",
+      //     "index": 0
+      //   }
+      // ],
       if (text === undefined) {
         console.error(`Excepted text but was undefined in response`, response);
         throw new Error(`Excepted text but was undefined in response`);

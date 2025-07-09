@@ -44,6 +44,11 @@ declare global {
         toolName: string,
         params: unknown,
       ) => Promise<Record<string, unknown>>;
+      setToolVisibility: (
+        serverName: string,
+        toolName: string,
+        visibility: boolean,
+      ) => Promise<void>;
       // Add any other electronAPI methods that might be used by services
     };
   }

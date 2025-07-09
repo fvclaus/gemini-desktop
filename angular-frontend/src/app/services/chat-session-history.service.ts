@@ -4,6 +4,8 @@ import { AiMessage, ToolRequestMessage, UserMessage } from './chat.service';
 import { SettingsService } from './settings.service';
 import { BehaviorSubject, Observable } from 'rxjs';
 
+// TODO Write into workspace
+
 @Injectable({
   providedIn: 'root',
 })

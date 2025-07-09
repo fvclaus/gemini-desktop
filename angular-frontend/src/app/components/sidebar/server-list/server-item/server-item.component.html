@@ -1,7 +1,13 @@
 <div class="server-item-card">
   <div mat-list-item role="listitem" class="server-item-material">
     <div class="server-item-content">
-      <mat-expansion-panel class="tools-expansion-panel" >
+      <mat-expansion-panel
+        class="tools-expansion-panel"
+        [hideToggle]="server.state !== 'ERROR' && server.state !== 'STARTED'"
+        [expanded]="isPanelOpened()"
+        (opened)="onPanelOpened()"
+        (closed)="onPanelClosed()"
+      >
         <mat-expansion-panel-header>
           <div matListItemTitle class="server-info-material">
             <span class="server-name-material" [title]="server.identifier">{{ server.identifier }}</span>
@@ -26,7 +32,12 @@
               </mat-panel-title>
               <mat-chip-set>
                 @for (tool of server.tools; track tool) {
-                  <mat-chip (click)="openToolDialog(tool)" class="tool-chip">{{ tool.name }}</mat-chip>
+                  <mat-chip class="tool-chip" (click)="$event.stopPropagation()">
+                    <span (click)="openToolDialog(tool)">{{ tool.name }}</span>
+                    <button mat-icon-button (click)="toggleToolVisibility(tool)" [attr.aria-label]="tool.hidden ? 'Show tool' : 'Hide tool'">
+                      <mat-icon>{{ tool.hidden ? 'visibility_off' : 'visibility' }}</mat-icon>
+                    </button>
+                  </mat-chip>
                 }
               </mat-chip-set>
             </div>

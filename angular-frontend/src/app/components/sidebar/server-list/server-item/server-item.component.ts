@@ -1,4 +1,4 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, inject } from '@angular/core'; // Import ChangeDetectionStrategy
 import { CommonModule } from '@angular/common';
 import { ChatService } from '../../../../services/chat.service'; // Import ChatService
 import {
@@ -13,6 +13,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion'; // Import MatExpansionModule
 import { MatDialog } from '@angular/material/dialog';
 import { ToolInfoDialogComponent } from '../../../tool-info-dialog/tool-info-dialog.component';
+
+const serverToPanelStatus: Record<string, boolean> = {};
 
 @Component({
   selector: 'app-server-item',
@@ -35,6 +37,18 @@ export class ServerItemComponent {
 
   @Input() server!: McpServerStatus;
 
+  isPanelOpened(): boolean {
+    return serverToPanelStatus[this.server.identifier];
+  }
+
+  onPanelOpened(): void {
+    serverToPanelStatus[this.server.identifier] = true;
+  }
+
+  onPanelClosed(): void {
+    serverToPanelStatus[this.server.identifier] = false;
+  }
+
   openToolDialog(tool: McpToolDefinition): void {
     this.dialog.open(ToolInfoDialogComponent, {
       width: '600px',
@@ -52,5 +66,13 @@ export class ServerItemComponent {
         this.server,
       );
     }
+  }
+
+  toggleToolVisibility(tool: McpToolDefinition): void {
+    this.chatService.setToolVisibility(
+      this.server.identifier,
+      tool.name,
+      !tool.hidden,
+    );
   }
 }

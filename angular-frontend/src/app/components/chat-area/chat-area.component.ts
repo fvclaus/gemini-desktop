@@ -59,6 +59,8 @@ export class ChatAreaComponent implements OnInit, OnDestroy {
         this.aggregatedUsageMetadata = {};
         this.aggregatedModelInstance = activeProfile?.model;
 
+        this.totalCost = 0;
+
         this.totalTokensUsed = newMessages.reduce((sum, message) => {
           if (
             (message.sender === 'ai' && message.type === 'message') ||

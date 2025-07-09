@@ -18,14 +18,14 @@ export interface McpServerStarting {
 export interface McpServerStarted {
   identifier: string;
   state: "STARTED";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  tools: any[];
+  tools: McpToolDefinition[];
 }
 
 export interface McpToolDefinition {
   name: string;
   description: string;
   inputSchema: object;
+  hidden: boolean;
 }
 
 export interface McpServerError {
