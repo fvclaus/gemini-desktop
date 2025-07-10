@@ -1,8 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { ChatSession } from './chat-session.interface';
-import { AiMessage, ToolRequestMessage, UserMessage } from './chat.service';
+import { UserMessage } from './chat.service';
 import { SettingsService } from './settings.service';
 import { BehaviorSubject, Observable } from 'rxjs';
+import {
+  deserializeChatSession,
+  SerializedChatSession,
+} from './serialization.utils';
 
 // TODO Write into workspace
 
@@ -27,69 +31,15 @@ export class ChatSessionHistoryService {
     if (!sessionsJson) {
       return [];
     }
-    const sessions: ChatSession[] = JSON.parse(sessionsJson);
-    // Re-hydrate model instances
-    sessions.forEach((session) => {
-      session.messages.forEach((message) => {
-        if (
-          message.sender === 'ai' &&
-          (message.type === 'message' || message.type === 'tool_request')
-        ) {
-          const aiMessage = message as AiMessage | ToolRequestMessage;
-          aiMessage.model = this.settingsService.getGeminiModel(
-            // TODO Better typing
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            aiMessage.model as any,
-          );
-        }
-      });
-    });
-    return sessions;
+    const parsedSessions: SerializedChatSession[] = JSON.parse(sessionsJson);
+    return parsedSessions.map((session) =>
+      deserializeChatSession(session, this.settingsService),
+    );
   }
 
   private saveSessionsToLocalStorage(sessions: ChatSession[]): void {
-    const serializableSessions = sessions.map((session) => {
-      const serializableMessages = session.messages.map((message) => {
-        if (
-          message.sender === 'ai' &&
-          (message.type === 'message' || message.type === 'tool_request')
-        ) {
-          return {
-            ...message,
-            model: message.model.name,
-          };
-        }
-        return message;
-      });
-      return { ...session, messages: serializableMessages };
-    });
-    localStorage.setItem(
-      this.STORAGE_KEY,
-      JSON.stringify(serializableSessions),
-    );
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sessions));
     this._sessionsSubject.next(sessions); // Emit the updated sessions
-  }
-
-  private saveSessions(sessions: ChatSession[]): void {
-    const serializableSessions = sessions.map((session) => {
-      const serializableMessages = session.messages.map((message) => {
-        if (
-          message.sender === 'ai' &&
-          (message.type === 'message' || message.type === 'tool_request')
-        ) {
-          return {
-            ...message,
-            model: message.model.name,
-          };
-        }
-        return message;
-      });
-      return { ...session, messages: serializableMessages };
-    });
-    localStorage.setItem(
-      this.STORAGE_KEY,
-      JSON.stringify(serializableSessions),
-    );
   }
 
   getAllSessions(): ChatSession[] {

@@ -6,22 +6,25 @@ import {
   Page,
   BrowserContext,
 } from '@playwright/test';
-import { ChatSession } from '../src/app/services/chat-session.interface';
 import {
   UserMessage,
-  AiMessage,
-  ToolRequestMessage,
   ToolResultMessage,
   LoadingMessage,
   ToolDecisionMessage,
 } from '../src/app/services/chat.service';
+import { Gemini25Pro } from '../src/app/services/settings.service';
+import {
+  SerializedAiMessage,
+  SerializedChatSession,
+  SerializedToolRequestMessage,
+} from '../src/app/services/serialization.utils';
 
 test.describe('ChatMessageComponent Visual Snapshots', () => {
   let browser: Browser;
   let context: BrowserContext;
   let page: Page;
   let electronApiMock!: Window['electronAPI'];
-  let chatSession!: ChatSession;
+  let chatSession!: SerializedChatSession;
 
   test.beforeAll(async () => {
     browser = await chromium.launch({ headless: false });
@@ -46,15 +49,17 @@ test.describe('ChatMessageComponent Visual Snapshots', () => {
           timestamp: new Date(),
           id: `${id++}`,
           showRequestedTools: true,
+          model: Gemini25Pro.name,
           tools: [
             {
-              name: 'read_file',
+              serverName: 'filesystem',
+              toolName: 'read_file',
               args: {
                 path: 'hello_word.txt',
               },
             },
           ],
-        } as ToolRequestMessage,
+        } as SerializedToolRequestMessage,
         {
           sender: 'user',
           type: 'tool_decision',
@@ -78,7 +83,9 @@ test.describe('ChatMessageComponent Visual Snapshots', () => {
               path: 'hello_word.txt',
             },
           },
-          result: 'Success details.',
+          result: {
+            output: 'Success details.',
+          },
           timestamp: new Date(),
           id: `${id++}`,
         } as ToolResultMessage,
@@ -86,11 +93,12 @@ test.describe('ChatMessageComponent Visual Snapshots', () => {
           sender: 'ai',
           type: 'message',
           text: 'The content of the file is:\n```\nSimulated result for read_file\n```',
+          model: Gemini25Pro.name,
           htmlContent:
             '<p>The content of the file is:</p>\n<pre><code>Simulated result for read_file\n</code></pre>\n',
           timestamp: new Date(),
           id: `${id++}`,
-        } as AiMessage,
+        } as SerializedAiMessage,
         {
           sender: 'ai',
           type: 'loading',
@@ -109,17 +117,28 @@ test.describe('ChatMessageComponent Visual Snapshots', () => {
       localStorage.setItem('api_key', '########');
     }, chatSession);
 
-    const values = {
-      callMcpTool: { value: null, status: 'resolved' },
+    type ElectronApiValues = {
+      [func in keyof Window['electronAPI']]: {
+        value: Awaited<ReturnType<Window['electronAPI'][func]>>;
+        status: 'resolved' | 'rejected';
+      };
+    };
+
+    const values: ElectronApiValues = {
+      callMcpTool: { value: {}, status: 'resolved' },
       changeWorkspaceAndReload: { value: '', status: 'resolved' },
       getInitialWorkspace: { value: null, status: 'resolved' },
       getMcpServers: { value: [], status: 'resolved' },
       getSelectedWorkspace: { value: null, status: 'resolved' },
-      showOpenDialog: { value: { canceled: true }, status: 'resolved' },
+      showOpenDialog: {
+        value: { canceled: true },
+        status: 'resolved',
+      } as const,
       onMcpServerStatus: { value: undefined, status: 'resolved' },
       onWorkspaceSelected: { value: undefined, status: 'resolved' },
+      setToolVisibility: { value: undefined, status: 'resolved' },
     };
-    await page.addInitScript((electronAPIValues) => {
+    await page.addInitScript((electronAPIValues: ElectronApiValues) => {
       function createPromise<T>({
         value,
         status,
@@ -134,53 +153,19 @@ test.describe('ChatMessageComponent Visual Snapshots', () => {
         }
       }
       window.electronAPI = {
-        callMcpTool: () =>
-          createPromise({
-            ...electronAPIValues.callMcpTool,
-            status: electronAPIValues.callMcpTool.status as
-              | 'resolved'
-              | 'rejected',
-          }),
+        callMcpTool: () => createPromise(electronAPIValues.callMcpTool),
         changeWorkspaceAndReload: () =>
-          createPromise({
-            ...electronAPIValues.changeWorkspaceAndReload,
-            status: electronAPIValues.changeWorkspaceAndReload.status as
-              | 'resolved'
-              | 'rejected',
-          }),
+          createPromise(electronAPIValues.changeWorkspaceAndReload),
         getInitialWorkspace: () =>
-          createPromise({
-            ...electronAPIValues.getInitialWorkspace,
-            status: electronAPIValues.getInitialWorkspace.status as
-              | 'resolved'
-              | 'rejected',
-          }),
-        getMcpServers: () =>
-          createPromise({
-            ...electronAPIValues.getMcpServers,
-            status: electronAPIValues.getMcpServers.status as
-              | 'resolved'
-              | 'rejected',
-          }),
+          createPromise(electronAPIValues.getInitialWorkspace),
+        getMcpServers: () => createPromise(electronAPIValues.getMcpServers),
         getSelectedWorkspace: () =>
-          createPromise({
-            ...electronAPIValues.getSelectedWorkspace,
-            status: electronAPIValues.getSelectedWorkspace.status as
-              | 'resolved'
-              | 'rejected',
-          }),
-        showOpenDialog: () =>
-          createPromise({
-            ...(electronAPIValues.showOpenDialog as {
-              value: { canceled: boolean };
-              status: 'resolved' | 'rejected';
-            }),
-            status: electronAPIValues.showOpenDialog.status as
-              | 'resolved'
-              | 'rejected',
-          }),
-        onMcpServerStatus: (callback) => {},
-        onWorkspaceSelected: (callback) => {},
+          createPromise(electronAPIValues.getSelectedWorkspace),
+        showOpenDialog: () => createPromise(electronAPIValues.showOpenDialog),
+        onMcpServerStatus: () => {},
+        onWorkspaceSelected: () => {},
+        setToolVisibility: () =>
+          createPromise(electronAPIValues.setToolVisibility),
       };
     }, values);
 

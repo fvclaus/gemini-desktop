@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { PersistedProfile, Profile } from './profile.interface';
 import { GoogleGenAI } from '@google/genai';
+import { deserializeProfile } from './serialization.utils';
 
 const PROFILES_STORAGE_KEY = 'gemini-desktop-profiles';
 const SKIP_DELETE_CONFIRMATION_KEY = 'skip_delete_confirmation';
@@ -33,6 +34,10 @@ export abstract class AbstractGeminiModel {
   inputTokenLimit?: number;
 
   abstract calculatePrice(usage: GeminiUsageMetadata): number;
+
+  toJSON(): string {
+    return this.name;
+  }
 }
 
 export class Gemini25Pro extends AbstractGeminiModel {
@@ -145,11 +150,9 @@ export class SettingsService {
   }
 
   private loadProfiles(): void {
-    const profiles = this.getProfilesFromStorage().map((p) => {
-      // TODO Better serialization
-      const modelInstance = this.getGeminiModel((p as PersistedProfile).model);
-      return { ...p, model: modelInstance };
-    });
+    const profiles = this.getProfilesFromStorage().map((p) =>
+      deserializeProfile(p, this),
+    );
 
     const activeProfiles = profiles.filter((p) => p.isActive);
     // More than one profile shouldn't be active, but if it is we just accept the first one
@@ -170,14 +173,7 @@ export class SettingsService {
   }
 
   private saveProfilesToStorage(profiles: Profile[]): void {
-    localStorage.setItem(
-      PROFILES_STORAGE_KEY,
-      JSON.stringify(
-        profiles.map((p) => {
-          return { ...p, model: p.model.name };
-        }),
-      ),
-    );
+    localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(profiles));
     this.profilesSubject.next(profiles);
     const activeProfile = profiles.find((p) => p.isActive);
     this.activeProfileSubject.next(activeProfile ? activeProfile : null);
@@ -185,11 +181,7 @@ export class SettingsService {
 
   addProfile(profile: PersistedProfile): void {
     const profiles = this.profilesSubject.value;
-    const modelInstance = this.modelsMap.get(profile.model);
-    // TODO
-    if (!modelInstance) {
-      throw new Error(`Unknown model: ${profile.model}`);
-    }
+    const modelInstance = this.getGeminiModel(profile.model);
     this.saveProfilesToStorage([
       ...profiles,
       { ...profile, model: modelInstance, isActive: true },
@@ -200,11 +192,7 @@ export class SettingsService {
     const profiles = this.profilesSubject.value;
     const index = profiles.findIndex((p) => p.name === updatedProfile.name);
     if (index !== -1) {
-      const modelInstance = this.modelsMap.get(updatedProfile.model);
-      // TODO
-      if (!modelInstance) {
-        throw new Error(`Unknown model: ${updatedProfile.model}`);
-      }
+      const modelInstance = this.getGeminiModel(updatedProfile.model);
       profiles[index] = {
         ...updatedProfile,
         model: modelInstance,
