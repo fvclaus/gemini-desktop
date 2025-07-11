@@ -1,4 +1,4 @@
-import { ChatSession } from './chat-session.interface';
+import { ChatSession } from '../domain/chatSession';
 import {
   AiMessage,
   Message,
@@ -9,8 +9,8 @@ import {
   ToolDecisionMessage,
   ToolResultMessage,
 } from './chat.service';
-import { SettingsService } from './settings.service';
-import { Profile, PersistedProfile } from './profile.interface';
+import { ProfilesService } from './profiles.service';
+import { Profile, PersistedProfile } from '../domain/profile';
 
 export type SerializedAiMessage = Omit<AiMessage, 'model'> & { model: string };
 export type SerializedToolRequestMessage = Omit<ToolRequestMessage, 'model'> & {
@@ -34,7 +34,7 @@ export interface SerializedChatSession {
 
 export function deserializeChatSession(
   session: SerializedChatSession,
-  settingsService: SettingsService,
+  settingsService: ProfilesService,
 ): ChatSession {
   const deserializedMessages = session.messages.map(
     (message: SerializedMessage) => {
@@ -60,7 +60,7 @@ export function deserializeChatSession(
 
 export function deserializeProfile(
   profile: PersistedProfile,
-  settingsService: SettingsService,
+  settingsService: ProfilesService,
 ): Profile {
   return {
     ...profile,

@@ -5,19 +5,15 @@ import { MatChipsModule } from '@angular/material/chips';
 import { ChatMessageComponent } from './chat-message/chat-message.component';
 import { ChatInputComponent } from './chat-input/chat-input.component';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import {
-  AiMessage,
-  ChatService,
-  Message,
-  ToolRequestMessage,
-} from '../../services/chat.service';
+import { AiMessage, Message, ToolRequestMessage } from '../../domain/messages';
 import { Subscription, combineLatest } from 'rxjs';
 import {
-  AbstractGeminiModel,
   GeminiUsageMetadata,
-  SettingsService,
-} from '../../services/settings.service';
+  ProfilesService,
+} from '../../services/profiles.service';
+import { AbstractGeminiModel } from '../../domain/models';
 import { UsageMetadataDisplayComponent } from '../usage-metadata-display/usage-metadata-display.component';
+import { ChatService } from '../../services/chat.service';
 
 @Component({
   selector: 'app-chat-area',
@@ -36,7 +32,7 @@ import { UsageMetadataDisplayComponent } from '../usage-metadata-display/usage-m
 })
 export class ChatAreaComponent implements OnInit, OnDestroy {
   private chatService = inject(ChatService);
-  private settingsService = inject(SettingsService);
+  private settingsService = inject(ProfilesService);
 
   messages: Message[] = [];
   totalTokensUsed = 0;

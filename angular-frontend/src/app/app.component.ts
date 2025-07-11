@@ -6,7 +6,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { WorkspaceComponent } from './components/sidebar/workspace/workspace.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
-import { SettingsService } from './services/settings.service';
+import { ProfilesService } from './services/profiles.service';
 import { Subscription } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { SettingsDialogComponent } from './components/settings-dialog/settings-dialog.component';
@@ -27,7 +27,7 @@ import { SettingsDialogComponent } from './components/settings-dialog/settings-d
   styleUrl: './app.component.scss',
 })
 export class AppComponent implements OnInit {
-  private settingsService = inject(SettingsService);
+  private settingsService = inject(ProfilesService);
   private dialog = inject(MatDialog);
 
   title = 'GemCP Chat';

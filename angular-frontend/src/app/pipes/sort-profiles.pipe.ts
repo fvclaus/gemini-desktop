@@ -1,5 +1,5 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { Profile } from '../services/profile.interface';
+import { Profile } from '../domain/profile';
 
 @Pipe({
   name: 'sortProfiles',

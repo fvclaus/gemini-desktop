@@ -2,12 +2,12 @@ import { Component, OnInit, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatSessionHistoryService } from '../../services/chat-session-history.service';
 import { ChatService } from '../../services/chat.service';
-import { ChatSession } from '../../services/chat-session.interface';
+import { ChatSession } from '../../domain/chatSession';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatDialog } from '@angular/material/dialog';
 import { ChatHistoryDeletionConfirmationDialogComponent } from '../chat-history-deletion-confirmation-dialog/chat-history-deletion-confirmation-dialog.component';
-import { SettingsService } from '../../services/settings.service';
+import { ProfilesService } from '../../services/profiles.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Observable, Subscription } from 'rxjs';
@@ -29,7 +29,7 @@ export class ChatHistoryComponent implements OnInit, OnDestroy {
   private chatHistoryService = inject(ChatSessionHistoryService);
   private chatService = inject(ChatService);
   private dialog = inject(MatDialog);
-  private settingsService = inject(SettingsService);
+  private settingsService = inject(ProfilesService);
 
   public sessions$: Observable<ChatSession[]> =
     this.chatHistoryService.sessions$;

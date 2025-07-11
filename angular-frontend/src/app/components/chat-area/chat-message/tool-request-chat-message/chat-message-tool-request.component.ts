@@ -8,10 +8,10 @@ import {
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
-import { ToolRequestMessage } from '../../../../services/chat.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatIcon } from '@angular/material/icon';
 import { UsageMetadataDisplayComponent } from '../../../usage-metadata-display/usage-metadata-display.component';
+import { ToolRequestMessage } from '../../../../domain/messages';
 
 @Component({
   selector: 'app-chat-message-tool-request',

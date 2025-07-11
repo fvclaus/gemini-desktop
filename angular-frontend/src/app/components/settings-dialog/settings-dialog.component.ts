@@ -1,16 +1,16 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import {
-  SettingsService,
-  GEMINI_MODELS,
-} from '../../services/settings.service';
+  ProfilesService,
+} from '../../services/profiles.service';
+import { GEMINI_MODELS } from '../../domain/models';
 
 import {
   FormlyFieldConfig,
   FormlyModule,
   FormlyFormOptions,
 } from '@ngx-formly/core';
-import { PersistedProfile, Profile } from '../../services/profile.interface';
+import { PersistedProfile, Profile } from '../../domain/profile';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -37,7 +37,7 @@ import {
   ],
 })
 export class SettingsDialogComponent implements OnInit {
-  private settingsService = inject(SettingsService);
+  private settingsService = inject(ProfilesService);
   private dialogRef = inject(MatDialogRef<SettingsDialogComponent>);
   public data: Profile | null = inject(MAT_DIALOG_DATA);
 

@@ -8,7 +8,7 @@ import {
   inject,
 } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
-import { GeminiUsageMetadata } from '../../services/settings.service';
+import { GeminiUsageMetadata } from '../../services/profiles.service';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCardModule } from '@angular/material/card';
 import { OverlayModule, OverlayRef, Overlay } from '@angular/cdk/overlay';

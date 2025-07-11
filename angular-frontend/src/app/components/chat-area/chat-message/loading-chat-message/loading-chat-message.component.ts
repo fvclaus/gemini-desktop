@@ -1,7 +1,7 @@
 import { Component, Input } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
-import { LoadingMessage } from '../../../../services/chat.service';
+import { LoadingMessage } from '../../../../domain/messages';
 
 @Component({
   selector: 'app-loading-chat-message',

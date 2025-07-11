@@ -1,12 +1,11 @@
-import { Injectable, inject } from '@angular/core';
-import { ChatSession } from './chat-session.interface';
-import { UserMessage } from './chat.service';
-import { SettingsService } from './settings.service';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { Injectable } from '@angular/core';
 import {
-  deserializeChatSession,
-  SerializedChatSession,
-} from './serialization.utils';
+  ChatSession,
+  deserializeChatSessions,
+  serializeChatSessions,
+} from '../domain/chatSession';
+import { UserMessage } from '../domain/messages';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 // TODO Write into workspace
 
@@ -15,7 +14,6 @@ import {
 })
 export class ChatSessionHistoryService {
   private readonly STORAGE_KEY = 'chat_session_history';
-  private settingsService = inject(SettingsService);
 
   private _sessionsSubject: BehaviorSubject<ChatSession[]>;
   public sessions$: Observable<ChatSession[]>;
@@ -31,15 +29,12 @@ export class ChatSessionHistoryService {
     if (!sessionsJson) {
       return [];
     }
-    const parsedSessions: SerializedChatSession[] = JSON.parse(sessionsJson);
-    return parsedSessions.map((session) =>
-      deserializeChatSession(session, this.settingsService),
-    );
+    return deserializeChatSessions(sessionsJson);
   }
 
   private saveSessionsToLocalStorage(sessions: ChatSession[]): void {
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sessions));
-    this._sessionsSubject.next(sessions); // Emit the updated sessions
+    localStorage.setItem(this.STORAGE_KEY, serializeChatSessions(sessions));
+    this._sessionsSubject.next(sessions);
   }
 
   getAllSessions(): ChatSession[] {

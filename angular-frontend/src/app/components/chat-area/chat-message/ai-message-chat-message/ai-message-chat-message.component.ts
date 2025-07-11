@@ -2,9 +2,9 @@ import { Component, Input, SecurityContext, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
-import { AiMessage } from '../../../../services/chat.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { UsageMetadataDisplayComponent } from '../../../usage-metadata-display/usage-metadata-display.component';
+import { AiMessage } from '../../../../domain/messages';
 
 @Component({
   selector: 'app-ai-message-chat-message',

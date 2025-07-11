@@ -12,7 +12,7 @@ import {
   LoadingMessage,
   ToolDecisionMessage,
 } from '../src/app/services/chat.service';
-import { Gemini25Pro } from '../src/app/services/settings.service';
+import { Gemini25Pro } from '../src/app/domain/models';
 import {
   SerializedAiMessage,
   SerializedChatSession,

@@ -4,10 +4,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
-import { SettingsService } from '../../services/settings.service';
+import { ProfilesService } from '../../services/profiles.service';
 import { MatDialog } from '@angular/material/dialog';
 import { SettingsDialogComponent } from '../settings-dialog/settings-dialog.component';
-import { Profile } from '../../services/profile.interface';
+import { Profile } from '../../domain/profile';
 import { Observable } from 'rxjs';
 import { SortProfilesPipe } from '../../pipes/sort-profiles.pipe';
 
@@ -27,7 +27,7 @@ import { SortProfilesPipe } from '../../pipes/sort-profiles.pipe';
   styleUrls: ['./profile-selector.component.scss'],
 })
 export class ProfileSelectorComponent {
-  private settingsService = inject(SettingsService);
+  private settingsService = inject(ProfilesService);
   private dialog = inject(MatDialog);
 
   profiles$: Observable<Profile[]> = this.settingsService.profiles$;

@@ -6,7 +6,6 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 import { CommonModule, NgClass } from '@angular/common';
-import { Message, ToolRequestMessage } from '../../../services/chat.service';
 import { MatCardModule } from '@angular/material/card';
 import { UserChatMessageComponent } from './user-chat-message/user-chat-message.component';
 import { AiMessageChatMessageComponent } from './ai-message-chat-message/ai-message-chat-message.component';
@@ -15,6 +14,7 @@ import { SystemErrorChatMessageComponent } from './system-error-chat-message/sys
 import { ToolDecisionChatMessageComponent } from './tool-decision-chat-message/tool-decision-chat-message.component';
 import { ToolResultChatMessageComponent } from './tool-result-chat-message/tool-result-chat-message.component';
 import { ToolRequestChatMessageComponent } from './tool-request-chat-message/chat-message-tool-request.component';
+import { Message, ToolRequestMessage } from '../../../domain/messages';
 
 @Component({
   selector: 'app-chat-message',

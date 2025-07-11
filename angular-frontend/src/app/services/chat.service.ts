@@ -9,61 +9,17 @@ import {
   FunctionCall,
   GenerateContentResponse,
 } from '@google/genai';
-import {
-  AbstractGeminiModel,
-  GeminiUsageMetadata,
-  SettingsService,
-} from './settings.service';
+import { ProfilesService } from './profiles.service';
 import { McpServerStatus } from '../../../../src/shared/types';
 import { ChatSessionHistoryService } from './chat-session-history.service';
-import { ChatSession } from './chat-session.interface';
-import { Profile } from './profile.interface';
-
-// Electron API types are now expected to be globally available via types.d.ts
-
-export interface UserMessage {
-  id: string;
-  sender: 'user';
-  type: 'message';
-  text: string;
-  timestamp: Date;
-}
-
-export interface LoadingMessage {
-  id: string;
-  sender: 'ai';
-  type: 'loading';
-  timestamp: Date;
-}
-
-export interface AiMessage {
-  id: string;
-  sender: 'ai';
-  type: 'message';
-  text: string;
-  htmlContent: string;
-  timestamp: Date;
-  usageMetadata?: GeminiUsageMetadata;
-  model: AbstractGeminiModel;
-}
-
-export interface SystemErrorMessage {
-  id: string;
-  sender: 'system';
-  type: 'error';
-  text: string;
-  details?: string;
-  showDetails?: boolean;
-  timestamp: Date;
-}
-
-export interface ToolDecisionMessage {
-  id: string;
-  sender: 'user';
-  type: 'tool_decision';
-  approval: 'approved' | 'rejected';
-  timestamp: Date;
-}
+import { ChatSession } from '../domain/chatSession';
+import { Profile } from '../domain/profile';
+import {
+  AiMessage,
+  Message,
+  ToolRequestMessage,
+  UserMessage,
+} from '../domain/messages';
 
 interface ToolCall {
   serverName: string;
@@ -71,42 +27,12 @@ interface ToolCall {
   args?: Record<string, unknown>;
 }
 
-export interface ToolRequestMessage {
-  id: string;
-  sender: 'ai';
-  type: 'tool_request';
-  tools: ToolCall[];
-  showRequestedTools?: boolean;
-  timestamp: Date;
-  usageMetadata?: GeminiUsageMetadata;
-  model: AbstractGeminiModel;
-}
-
-export interface ToolResultMessage {
-  id: string;
-  sender: 'system';
-  type: 'tool_result';
-  tool: { name: string; args?: Record<string, unknown> };
-  result: Record<string, unknown>;
-  showToolResults?: boolean;
-  timestamp: Date;
-}
-
-export type Message =
-  | UserMessage
-  | LoadingMessage
-  | SystemErrorMessage
-  | AiMessage
-  | ToolRequestMessage
-  | ToolResultMessage
-  | ToolDecisionMessage;
-
 @Injectable({
   providedIn: 'root',
 })
 export class ChatService {
   private ngZone = inject(NgZone);
-  private settingsService = inject(SettingsService);
+  private settingsService = inject(ProfilesService);
   private chatHistoryService = inject(ChatSessionHistoryService);
 
   private chatHistory: Content[] = [];

@@ -2,7 +2,7 @@ import { Component, Input } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { ToolDecisionMessage } from '../../../../services/chat.service';
+import { ToolDecisionMessage } from '../../../../domain/messages';
 
 @Component({
   selector: 'app-tool-decision-chat-message',

@@ -2,8 +2,8 @@ import { Component, Input, ViewEncapsulation } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { ToolResultMessage } from '../../../../services/chat.service';
 import { CommonModule } from '@angular/common';
+import { ToolResultMessage } from '../../../../domain/messages';
 
 @Component({
   selector: 'app-tool-result-chat-message',
