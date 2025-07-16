@@ -1,8 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
-import {
-  ProfilesService,
-} from '../../services/profiles.service';
+import { ProfilesService } from '../../services/profiles.service';
 import { GEMINI_MODELS } from '../../domain/models';
 
 import {
