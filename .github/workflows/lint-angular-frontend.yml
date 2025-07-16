@@ -23,7 +23,5 @@ jobs:
 
       - name: Install dependencies and Lint
         run: |
-          cd angular-frontend
           pnpm i
-          ls -ahl node_modules
-          pnpm exec ng lint
+          pnpm run lint

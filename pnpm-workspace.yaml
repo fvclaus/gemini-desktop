@@ -1,3 +1,5 @@
+packages:
+  - 'angular-frontend'
 ignoredBuiltDependencies:
   - electron
   - electron-winstaller
