@@ -18,6 +18,10 @@
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux"
   },
+  "engines": {
+    "pnpm": ">=10",
+    "node": ">=22"
+  },
   "keywords": [
     "Electron",
     "Gemini",
@@ -29,26 +33,33 @@
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.6"
   },
   "dependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@modelcontextprotocol/sdk": "^1.13.2",
+    "@types/json-schema": "^7.0.15",
     "@types/node": "^22.14.1",
-    "electron": "^35.1.5",
-    "electron-builder": "^25.1.8",
-    "electron-store": "^10.0.1",
-    "electron-vite": "^3.1.0",
-    "eslint": "^9.24.0",
+    "electron": "^37.2",
+    "electron-builder": "^26.0",
+    "electron-store": "^10.0",
+    "electron-vite": "^4.0",
+    "eslint": "^9.24",
+    "json-schema": "^0.4.0",
     "jsonc-parser": "^3.3.1",
     "katex": "^0.16.11",
     "marked": "^13.0.2",
     "node-fetch": "^2.7.0",
     "prettier": "^3.5.3",
     "typescript": "^5.8.3",
-    "vite": "^6.2.6",
-    "zod": "^3.25.67"
+    "zod": "^4.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
   }
 }
