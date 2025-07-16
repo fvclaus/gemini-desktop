@@ -9,9 +9,6 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: angular-frontend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,8 +21,8 @@ jobs:
       - name: Install pnpm
         run: npm i -g pnpm
 
-      - name: Install dependencies
-        run: pnpm i
-
-      - name: Run ESLint
-        run: pnpm run lint
+      - name: Install dependencies and Lint
+        run: |
+          cd angular-frontend
+          pnpm i
+          pnpm run lint
