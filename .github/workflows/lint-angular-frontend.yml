@@ -25,4 +25,4 @@ jobs:
         run: |
           cd angular-frontend
           pnpm i
-          pnpm run lint
+          pnpm exec ng lint
