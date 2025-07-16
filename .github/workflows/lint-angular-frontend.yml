@@ -24,4 +24,4 @@ jobs:
       - name: Install dependencies and Lint
         run: |
           pnpm i
-          pnpm run lint
+          pnpm --filter angular-frontend run lint

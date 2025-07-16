@@ -8,7 +8,7 @@
     "dist": "electron-builder",
     "ng:serve": "cd angular-frontend && ng serve",
     "electron:dev": "NODE_ENV=development electron .",
-    "lint": "eslint --cache .",
+    "lint-fixme": "eslint --cache .",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
