@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: mcp-gemini-desktop/angular-frontend
+        working-directory: angular-frontend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
