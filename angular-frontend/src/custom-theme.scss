@@ -1,18 +1,54 @@
-@use '@angular/material' as mat;
 @use "tailwind";
+@use '@angular/material' as mat;
+@use './_theme-colors' as my-theme;
 
+$theme: mat.define-theme((
+    color: (
+      primary: my-theme.$primary-palette,
+      tertiary: my-theme.$tertiary-palette,
+      theme-type: light
+    ),
+    // Should be a typography object
+    // typography: Roboto,
+    density: (
+      scale: 0
+    )
+  ));
 
 html {
   color-scheme: light;
-  @include mat.theme((
-    color: mat.$violet-palette,
-    typography: Roboto,
-    density: 0
-  ));
+  @include mat.all-component-themes($theme);
+  // @include mat.theme((
+  //   color: (
+  //     primary: my-theme.$primary-palette,
+  //     tertiary: my-theme.$tertiary-palette,
+  //     background: white
+  //   ),
+  //   typography: Roboto,
+  //   density: 0
+  // ));
+
+  .primary {
+    @include mat.button-color($theme: $theme, $color-variant: 'primary');
+  }
+
+  .secondary {
+    @include mat.button-theme($theme: $theme, $color-variant: 'secondary');
+  }
+
+  .tertiary {
+    @include mat.button-theme($theme: $theme, $color-variant: 'tertiary');
+  }
+
+  .error {
+    @include mat.button-theme($theme: $theme, $color-variant: 'error');
+  }
 }
 
 :root {
   @include mat.sidenav-overrides((
+    container-background-color: white, 
+    container-shape: 0px
   ));
 
   @include mat.form-field-overrides((

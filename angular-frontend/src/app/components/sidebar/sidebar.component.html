@@ -1,10 +1,18 @@
 <div class="sidebar-content-wrapper">
   <div class="tab-header">
-    <button mat-icon-button (click)="newChat()" [class.active]="activeTab === 'new'">
-      <mat-icon>add</mat-icon>
-    </button>
+    @if (activeProfile$ | async; as result) {
+      <div class="tw:px-4 tw:py-1 tw:mr-auto tw:text-sm tw:text-slate-600 tw:bg-slate-100 tw:rounded-lg tw:shadow-sm tw:self-center">
+        <span>{{ result.model.name }}</span>
+      </div>
+    }
     <button mat-icon-button (click)="setTab('servers')" [class.active]="activeTab === 'servers'">
       <mat-icon>dvr</mat-icon>
+    </button>
+  </div>
+  <div class="new-chat-container">
+    <button mat-button (click)="newChat()">
+      <mat-icon>add</mat-icon>
+      <span>New Chat</span>
     </button>
   </div>
 

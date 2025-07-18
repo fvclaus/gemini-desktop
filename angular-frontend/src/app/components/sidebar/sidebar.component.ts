@@ -9,6 +9,9 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { ChatHistoryComponent } from '../chat-history/chat-history.component';
+import { MatDividerModule } from '@angular/material/divider';
+import { ProfilesService } from '../../services/profiles.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-sidebar',
@@ -20,14 +23,19 @@ import { ChatHistoryComponent } from '../chat-history/chat-history.component';
     MatButtonModule,
     MatIconModule,
     ChatHistoryComponent,
+    MatDividerModule,
+    CommonModule,
   ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.css',
 })
 export class SidebarComponent {
   private chatService = inject(ChatService);
+  private profileService = inject(ProfilesService);
 
   public activeTab: 'new' | 'servers' = 'new';
+
+  public activeProfile$ = this.profileService.activeProfile$;
 
   setTab(tab: 'new' | 'servers'): void {
     this.activeTab = tab;

@@ -2,10 +2,13 @@
   <div class="workspace-container">
     @if (!state.isLoading && !state.error) {
       <div class="workspace-content">
-        <mat-icon>folder</mat-icon>
-        <span class="workspace-name">{{ extractFolderName(state.path) }}</span>
-        <button mat-icon-button (click)="promptForWorkspace()" [disabled]="state.isLoading">
+        <div class="workspace-content__item">
+          <mat-icon>folder</mat-icon>
+          <span class="workspace-name">{{ extractFolderName(state.path) }}</span>
+        </div>
+        <button matButton class="secondary" (click)="promptForWorkspace()" [disabled]="state.isLoading">
           <mat-icon>{{ state.path ? 'sync_alt' : 'add_circle_outline' }}</mat-icon>
+          Switch Workspace
         </button>
       </div>
     }

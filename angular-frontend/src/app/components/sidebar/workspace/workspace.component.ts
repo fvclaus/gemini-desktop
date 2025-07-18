@@ -29,7 +29,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     MatProgressSpinnerModule,
   ],
   templateUrl: './workspace.component.html',
-  styleUrl: './workspace.component.css',
+  styleUrl: './workspace.component.scss',
 })
 export class WorkspaceComponent {
   private cdr = inject(ChangeDetectorRef);
