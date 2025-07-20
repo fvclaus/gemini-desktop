@@ -1,23 +1,38 @@
+@use 'sass:map';
 @use "tailwind";
 @use '@angular/material' as mat;
 @use './_theme-colors' as my-theme;
+@use '@angular/material/core/theming/theming';
+@use '@angular/material/core/tokens/m3-utils';
+@use './app/components/pill/pill-theme' as pill;
+@use './app/components/sidebar/sidebar-theme' as sidebar;
 
-$theme: mat.define-theme((
+$theme: (
     color: (
-      primary: my-theme.$primary-palette,
-      tertiary: my-theme.$tertiary-palette,
-      theme-type: light
+      primary: mat.$violet-palette,
+      tertiary: mat.$orange-palette,
+      // tertiary: my-theme.$tertiary-palette,
+      theme-type: color-scheme,
+      use-system-variables: false
     ),
     // Should be a typography object
-    // typography: Roboto,
+    typography: (
+      plain-family: Roboto
+    ),
     density: (
-      scale: 0
+      scale: -3
     )
-  ));
+);
+
+// validates the schema
+$mat-theme: mat.define-theme($theme);
+
+// Get the map of all system properties from the theme
+$system: m3-utils.get-system($mat-theme);
 
 html {
   color-scheme: light;
-  @include mat.all-component-themes($theme);
+  @include mat.all-component-themes($mat-theme);
   // @include mat.theme((
   //   color: (
   //     primary: my-theme.$primary-palette,
@@ -27,29 +42,45 @@ html {
   //   typography: Roboto,
   //   density: 0
   // ));
+  // mat.theme will emit system variables only if the input is a configuration map,
+  // if the input is a pre-built mat.theme, it will not emit them
+  @include mat.theme($theme);
 
-  .primary {
-    @include mat.button-color($theme: $theme, $color-variant: 'primary');
+  --density-scale: #{map.get($system, density-scale)};
+
+  @include pill.theme($mat-theme);
+  @include sidebar.theme($mat-theme);
+
+  .mat-button-primary {
+    @include mat.button-color($theme: $mat-theme, $color-variant: 'primary');
   }
 
-  .secondary {
-    @include mat.button-theme($theme: $theme, $color-variant: 'secondary');
+  .mat-button-secondary {
+    @include mat.button-theme($theme: $mat-theme, $color-variant: 'secondary');
   }
 
-  .tertiary {
-    @include mat.button-theme($theme: $theme, $color-variant: 'tertiary');
+  .mat-button-tertiary {
+    @include mat.button-theme($theme: $mat-theme, $color-variant: 'tertiary');
   }
 
-  .error {
-    @include mat.button-theme($theme: $theme, $color-variant: 'error');
+  .mat-button-error {
+    @include mat.button-theme($theme: $mat-theme, $color-variant: 'error');
+  }
+
+  --background-color-contrast: white;
+
+  .sidenav {
+    @include mat.sidenav-overrides((
+      // container-background-color: var(--mat-sys-secondary-container), 
+      // container-text-color: var(--mat-sys-on-secondary-container),
+      container-shape: 0px,
+      content-background-color: var(--background-color-contrast)
+    ));
   }
 }
 
 :root {
-  @include mat.sidenav-overrides((
-    container-background-color: white, 
-    container-shape: 0px
-  ));
+  
 
   @include mat.form-field-overrides((
     // outlined-outline-width: 0

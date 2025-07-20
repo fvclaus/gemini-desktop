@@ -1,41 +1,33 @@
 <div class="sidebar-content-wrapper">
   <div class="tab-header">
-    @if (activeProfile$ | async; as result) {
-      <div class="tw:px-4 tw:py-1 tw:mr-auto tw:text-sm tw:text-slate-600 tw:bg-slate-100 tw:rounded-lg tw:shadow-sm tw:self-center">
-        <span>{{ result.model.name }}</span>
-      </div>
-    }
     <button mat-icon-button (click)="setTab('servers')" [class.active]="activeTab === 'servers'">
       <mat-icon>dvr</mat-icon>
     </button>
-  </div>
-  <div class="new-chat-container">
-    <button mat-button (click)="newChat()">
-      <mat-icon>add</mat-icon>
-      <span>New Chat</span>
-    </button>
+    <app-pill text="MCP Server"></app-pill>
   </div>
 
   <div>
     @switch (activeTab) {
-      @case ('new') {
-        <div>
-          <app-chat-history></app-chat-history>
+      @case ('chat') {
+        <div class="new-chat-container">
+          <button mat-button (click)="newChat()">
+            <mat-icon>add</mat-icon>
+            <span>New Chat</span>
+          </button>
         </div>
+        <h3 class="sidebar-header">Recent</h3>
+        <app-chat-history></app-chat-history>
       }
       @case ('servers') {
-        <div>
-          <div class="sidebar-footer-material done-button-container">
-            <button mat-stroked-button (click)="setTab('new')">
-              Done
-            </button>
-          </div>
-          <mat-toolbar class="sidebar-toolbar">
-            <span>MCP Servers</span>
-          </mat-toolbar>
-          <div class="sidebar-section">
-            <app-server-list></app-server-list>
-          </div>
+        <div class="new-chat-container">
+          <button mat-button (click)="setTab('chat')">
+            <mat-icon>check</mat-icon>
+            Done
+          </button>
+        </div>
+        <h3 class="sidebar-header">MCP Servers</h3>
+        <div class="sidebar-section">
+          <app-server-list></app-server-list>
         </div>
       }
     }

@@ -1,3 +1,6 @@
+@use 'sass:map';
+@use '@angular/material/core/theming/theming';
+
 :host {
   display: flex; /* Ensure the host element behaves as a flex container for the wrapper */
   flex-direction: column;
@@ -16,12 +19,8 @@
   border-bottom: 1px solid rgba(0,0,0,0.12);
 }
 
-.sidebar-toolbar.mat-toolbar {
-  flex-shrink: 0; /* Prevent toolbars from shrinking */
-  /* Material theme handles background and text color */
-}
-.sidebar-toolbar.mat-toolbar span {
-  font-weight: 500; /* Material's medium weight for titles */
+.sidebar-header {
+  padding: var(--sidebar-padding);
 }
 
 .sidebar-section {
@@ -51,8 +50,7 @@
 }
 .tab-header {
   display: flex;
-  justify-content: flex-end;
-  padding: 8px;
+  padding: var(--sidebar-padding);
 }
 
 .tab-header .mat-icon-button {

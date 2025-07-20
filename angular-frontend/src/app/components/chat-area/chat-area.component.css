@@ -2,8 +2,24 @@
   display: flex; /* Already set in global, but good for explicitness if global changes */
   flex-direction: column;
   flex-grow: 1;
-  height: 100%;
+  --rounded-corner-margin: 10px;
+  /* height: 100%; */
+  height: calc(100% - 2 * var(--rounded-corner-margin));
   overflow: hidden;
+  /* TODO scale */
+  background-color: var(--mat-sys-surface);
+
+}
+
+.chat-area-message-and-input {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 2;
+  border-radius: var(--mat-sys-corner-large);
+  margin-left: var(--rounded-corner-margin);
+  margin-right: var(--rounded-corner-margin);
+  margin-bottom: var(--rounded-corner-margin);
+  background-color: var(--background-color-contrast);
 }
 
 .chat-area-material-wrapper {
@@ -19,11 +35,14 @@
   /* Material theme handles background, text color, and border */
 }
 .chat-header-content {
-  width: 100%;
+  width: calc(100% - 2 * var(--rounded-corner-margin));
   padding:10px;
-  border-bottom: 1px solid black;
   display: flex;
   flex-direction: row;
+  margin: var(--rounded-corner-margin);
+  background-color: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-secondary-container);
+  border-radius: var(--mat-sys-corner-large);
 }
 
 

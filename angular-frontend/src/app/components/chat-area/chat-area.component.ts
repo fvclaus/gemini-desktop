@@ -32,7 +32,7 @@ import { ChatService } from '../../services/chat.service';
 })
 export class ChatAreaComponent implements OnInit, OnDestroy {
   private chatService = inject(ChatService);
-  private settingsService = inject(ProfilesService);
+  private profilesService = inject(ProfilesService);
 
   messages: Message[] = [];
   totalTokensUsed = 0;
@@ -47,7 +47,7 @@ export class ChatAreaComponent implements OnInit, OnDestroy {
     this.subscriptions.add(
       combineLatest([
         this.chatService.messages$,
-        this.settingsService.activeProfile$,
+        this.profilesService.activeProfile$,
       ]).subscribe(([newMessages, activeProfile]) => {
         this.messages = newMessages;
         this.inputTokenLimit = activeProfile?.model?.inputTokenLimit || 0;
@@ -93,7 +93,7 @@ export class ChatAreaComponent implements OnInit, OnDestroy {
   }
 
   handleMessageSent(messageText: string): void {
-    const profile = this.settingsService.getActiveProfile();
+    const profile = this.profilesService.getActiveProfile();
     if (messageText && messageText.trim().length > 0) {
       this.chatService.sendMessage(profile, messageText);
     }
@@ -103,7 +103,7 @@ export class ChatAreaComponent implements OnInit, OnDestroy {
     message: ToolRequestMessage;
     approved: boolean;
   }) {
-    const profile = this.settingsService.getActiveProfile();
+    const profile = this.profilesService.getActiveProfile();
     this.chatService.sendToolResponse(
       profile,
       event.approved,

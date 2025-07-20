@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, inject, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -8,6 +8,9 @@ import { TextFieldModule } from '@angular/cdk/text-field';
 
 import { MatDividerModule } from '@angular/material/divider';
 import { ProfileSelectorComponent } from '../../profile-selector/profile-selector.component';
+import { ProfilesService } from '../../../services/profiles.service';
+import { CommonModule } from '@angular/common';
+import { PillComponent } from '../../pill/pill.component';
 
 @Component({
   selector: 'app-chat-input',
@@ -21,12 +24,16 @@ import { ProfileSelectorComponent } from '../../profile-selector/profile-selecto
     TextFieldModule,
     MatDividerModule,
     ProfileSelectorComponent,
+    CommonModule,
+    PillComponent,
   ],
   templateUrl: './chat-input.component.html',
   styleUrl: './chat-input.component.css',
 })
 export class ChatInputComponent {
   @Output() messageSent = new EventEmitter<string>();
+  private profilesService = inject(ProfilesService);
+  public activeProfile$ = this.profilesService.activeProfile$;
   messageText = '';
   sendMessageOnEnter(event: Event): void {
     if (

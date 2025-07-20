@@ -24,19 +24,18 @@ let mainWindow!: BrowserWindow;
 const ServerDefinitionSchema = z.object({
   command: z.string(),
   args: z.array(z.string()),
-  env: z.record(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
   hidden: z.array(z.string()).optional(), // Add hidden property here
 });
 
 // Zod schema for the entire mcpServers.json
 const McpServersConfigSchema = z
   .object({
-    mcpServers: z.record(ServerDefinitionSchema),
+    mcpServers: z.record(z.string(), ServerDefinitionSchema),
   })
   .strict();
 
 type McpServersConfig = z.infer<typeof McpServersConfigSchema>;
-type ServerDefinition = z.infer<typeof ServerDefinitionSchema>;
 
 let lastMcpConfig: {
   config: McpServersConfig;
@@ -91,7 +90,7 @@ async function getMcpServersConfig(workspacePath: string): Promise<{
     return { config, configPath: mcpConfigPath, configFileName };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error(`[MCP] Invalid ${configFileName} format:`, error.errors);
+      console.error(`[MCP] Invalid ${configFileName} format:`, error.message);
     } else if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       console.log(
         `[MCP] ${configFileName} not found in workspace. No servers to start.`,
@@ -112,6 +111,7 @@ async function loadAndStartMcpServers(workspacePath: string): Promise<void> {
     const newConfig = configResult ? configResult.config : null;
 
     // Deep compare new config with last loaded config
+    // Otherwise this will run after the code updated the hidden fields.
     if (JSON.stringify(newConfig) === JSON.stringify(lastMcpConfig?.config)) {
       console.log("[MCP] Configuration unchanged. Skipping server restart.");
       sendAllServerStatuses();

@@ -1,0 +1,28 @@
+@use 'sass:map';
+@use '@angular/material/core/theming/theming';
+@use '@angular/material/core/tokens/m3-utils';
+
+// This is the main theme mixin for your component
+@mixin theme($theme) {
+  // Get the map of all system properties from the theme
+  $system: m3-utils.get-system($theme);
+
+  // Get the density scale number (e.g., 0, -1, -2)
+  $density-scale: map.get($system, density-scale);
+
+  // It's a good practice to clamp the value to what your component supports
+  $scale: theming.clamp-density($density-scale, -2); // e.g., support from -2 to 0
+
+  // You can output CSS directly in a mixin without wrapping it in a class.
+  // For example, this will set a CSS variable at the point where the mixin is included:
+  // TODO Convert to px
+  $pill-padding-map: (
+    0: 0.25rem 1rem 0.25rem 1rem,
+    -1: 0.25rem 0.75rem 0.25rem 0.75rem,
+    -2: 0.25rem 0.5rem 0.25rem 0.5rem,
+  );
+  --pill-shadow: var(--mat-sys-level1);
+  $pill-padding: map.get($pill-padding-map, $scale);
+  --pill-padding: #{$pill-padding};
+}
+

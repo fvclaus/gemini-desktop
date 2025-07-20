@@ -1,0 +1,8 @@
+.pill {
+  background-color: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+  font: var(--mat-sys-label-small);
+  border-radius: var(--mat-sys-corner-small);
+  box-shadow: var(--pill-shadow);
+  padding: var(--pill-padding);
+}

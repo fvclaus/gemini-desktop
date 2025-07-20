@@ -12,6 +12,7 @@ import { ChatHistoryComponent } from '../chat-history/chat-history.component';
 import { MatDividerModule } from '@angular/material/divider';
 import { ProfilesService } from '../../services/profiles.service';
 import { CommonModule } from '@angular/common';
+import { PillComponent } from '../pill/pill.component';
 
 @Component({
   selector: 'app-sidebar',
@@ -25,24 +26,23 @@ import { CommonModule } from '@angular/common';
     ChatHistoryComponent,
     MatDividerModule,
     CommonModule,
+    PillComponent,
   ],
   templateUrl: './sidebar.component.html',
-  styleUrl: './sidebar.component.css',
+  styleUrl: './sidebar.component.scss',
 })
 export class SidebarComponent {
   private chatService = inject(ChatService);
   private profileService = inject(ProfilesService);
 
-  public activeTab: 'new' | 'servers' = 'new';
+  public activeTab: 'chat' | 'servers' = 'chat';
 
-  public activeProfile$ = this.profileService.activeProfile$;
-
-  setTab(tab: 'new' | 'servers'): void {
+  setTab(tab: 'chat' | 'servers'): void {
     this.activeTab = tab;
   }
 
   newChat(): void {
     this.chatService.startNewSession();
-    this.setTab('new');
+    this.setTab('chat');
   }
 }

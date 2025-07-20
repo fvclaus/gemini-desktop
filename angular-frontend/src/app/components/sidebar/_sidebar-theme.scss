@@ -1,0 +1,21 @@
+@use 'sass:map';
+@use '@angular/material/core/theming/theming';
+@use '@angular/material/core/tokens/m3-utils';
+
+@mixin theme($theme) {
+  // Get the map of all system properties from the theme
+  $system: m3-utils.get-system($theme);
+
+  // Get the density scale number (e.g., 0, -1, -2)
+  $density-scale: map.get($system, density-scale);
+
+  // It's a good practice to clamp the value to what your component supports
+  $scale: theming.clamp-density($density-scale, -3);
+
+  --sidebar-padding: #{map.get((
+      0: 16px,
+      -1: 14px,
+      -2: 12px,
+      -3: 10px
+  ), $scale)};
+}

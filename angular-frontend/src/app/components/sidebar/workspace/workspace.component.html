@@ -6,7 +6,7 @@
           <mat-icon>folder</mat-icon>
           <span class="workspace-name">{{ extractFolderName(state.path) }}</span>
         </div>
-        <button matButton class="secondary" (click)="promptForWorkspace()" [disabled]="state.isLoading">
+        <button matButton class="mat-button-secondary" (click)="promptForWorkspace()" [disabled]="state.isLoading">
           <mat-icon>{{ state.path ? 'sync_alt' : 'add_circle_outline' }}</mat-icon>
           Switch Workspace
         </button>

@@ -11,6 +11,9 @@
 
   <div class="input-toolbar">
     <app-profile-selector></app-profile-selector>
+    @if (activeProfile$ | async; as result) {
+      <app-pill class="tw:ml-auto" [text]="result.model.label"></app-pill>
+    }
     <div class="toolbar-actions">
       <button mat-icon-button color="primary" id="send-btn-material" (click)="sendMessage()"
         [disabled]="!messageText.trim()">
